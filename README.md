@@ -5,7 +5,7 @@ The purpose of this github is to organize all of the useful code that is floatin
 
 From our initial brainstorming session here are some of the things we think belong in here:
 
-1) Pointers to codes (like MUSIC, spheric, ect.)
+1) Pointers to codes (like MUSIC, spheric, ect.) along with some how-to guides
 
 2) Particle moving scritps (like converting binary to hdf5, or moving particles around within the file)
 
