@@ -21,7 +21,10 @@ from optparse import OptionParser
 usage = "usage: python %prog <IRATE_File> <Snapshot> [options]" #maks sure vizlength is in units you want (i.e. kpc if you set --usekpc, etc.)
 parser = OptionParser(usage=usage)
 
-parser.add_option("--halo",dest="hindex",type=int,help="The index of the halo you want to examine, if not the largest", default=-1)
+parser.add_option("--halo",dest="hindex",type=int,help="The index of the halo you want to examine, if not the largest in the box", default=-1)
+parser.add_option("--rmin",dest="rmin",type=float,help="The minimum radius for the halo profiles (default is rvir/200)", default=-1.)
+parser.add_option("--rmax",dest="rmax",type=float,help="The minimum radius for the halo profiles (default is rvir)", default=-1.)
+parser.add_option("--nbins",dest="nbins",type=int,help="The number of radial bins (default is 70)", default=70)
 parser.add_option("-r",dest="rockstar",action="store_true",help="Set if you want calculate based off Rockstar info")
 parser.add_option("-a",dest="ahf",action="store_true",help="Set if you want calculate based off AHF info")
 parser.add_option("--pow",dest="rpow",action="store_true",help="Set if you want calculate the Power radius using Visnap")
@@ -50,7 +53,7 @@ rho_b = rhocrit * omega_m
 solmass=1.99 * 10**30 #convert solar masses to kg
 kpc=3.24 * 10**-17 #convert km to kpc
 G = 4.302e-6 #G in kpc * (km/s)^2 / solar masses
-nbins = 70
+nbins = ops.nbins
 h = 0.71
 
 outbase = '_profile_information.txt'
@@ -114,10 +117,19 @@ def savepoints(snap):
     r = (x**2 + y**2 + z**2)**0.5
     r = r * 1000/h
     
-    rvir = halodata['Rvir'][index1]
+    rvir = halodata['Rvir'][index1]/h
     print rvir
     
-    inhal = r < rvir/h
+    if ops.rmax==-1.:
+        maxR=rvir
+    else:
+        maxR=ops.rmax
+    if ops.rmin==-1.:
+        minR=rvir/200.
+    else:
+        minR=ops.rmin
+
+    inhal = r < maxR
     
     rin = r[inhal]
     vx = Vx[inhal]
@@ -125,7 +137,7 @@ def savepoints(snap):
     vz = Vz[inhal]
     m = mass[inhal]
     
-    radbins = logspace(log10(rvir/200.),log10(rvir),num=nbins)
+    radbins = logspace(log10(minR),log10(maxR),num=nbins)
     rmid =  zeros(len(radbins))
     diffrho = zeros(len(radbins))     
     vdisp = zeros(len(radbins),dtype='float')
@@ -239,9 +251,10 @@ print "Saving data as ", fname
 savetxt(fname, zip(rlist[0], diffrholist[0], vrotlist[0], sigvlist[0]))
 
 #and save a separate file with the power radius:
-print "Saving power radius..."
-f = open('Power_Radius.txt',"w")
-f.write("%s" %rPowlist[0])
-f.close()
+if ops.rpow:
+    print "Saving power radius..."
+    f = open('Power_Radius.txt',"w")
+    f.write("%s" %rPowlist[0])
+    f.close()
 
 print "done!"
