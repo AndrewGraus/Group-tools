@@ -22,7 +22,7 @@ usage = "usage: python %prog <IRATE_File> <Snapshot> [options]" #maks sure vizle
 parser = OptionParser(usage=usage)
 
 parser.add_option("--halo",dest="hindex",type=int,help="The index of the halo you want to examine, if not the largest in the box", default=-1)
-parser.add_option("--rmin",dest="rmin",type=float,help="The minimum radius for the halo profiles (default is rvir/200)", default=-1.)
+parser.add_option("--rmin",dest="rmin",type=float,help="The minimum radius for the halo profiles (default is rvir/400)", default=-1.)
 parser.add_option("--rmax",dest="rmax",type=float,help="The minimum radius for the halo profiles (default is rvir)", default=-1.)
 parser.add_option("--nbins",dest="nbins",type=int,help="The number of radial bins (default is 70)", default=70)
 parser.add_option("-r",dest="rockstar",action="store_true",help="Set if you want calculate based off Rockstar info")
@@ -125,7 +125,7 @@ def savepoints(snap):
     else:
         maxR=ops.rmax
     if ops.rmin==-1.:
-        minR=rvir/200.
+        minR=rvir/400.
     else:
         minR=ops.rmin
 
