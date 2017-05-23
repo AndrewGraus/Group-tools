@@ -74,10 +74,6 @@ def Load_Halo_Data(giz_halo_file,h=0.702):
     #Note h is NOT defined I could either find some way to parse it from the rockstar header
     #or require the snapshot as well (not ideal)
 
-    print '''################################################################################'''
-    print '''#NOTE: this sets h to 0.702 if that is not what you want pass it as an argument#'''
-    print '''################################################################################'''
-    '''Grab halo data specifically masses, vmax, rvir, rmax, vmax, positions, and velocities'''
     
     f_rock = np.loadtxt(giz_halo_file)
 
@@ -97,7 +93,7 @@ def Load_Halo_Data(giz_halo_file,h=0.702):
 
     return {'ids':id_rock, 'masses':M_rock, 'rvir':Rvir_rock, 'rmax':Rmax_rock, 'vmax':Vmax_rock, 'centers':centers_rock,'velocities':velocity_rock}
 
-def Identify_Host(giz_hdf5,halo_file,add_velocity=False):
+def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False):
     import numpy as np
     import yt, h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -105,10 +101,6 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False):
     #This script identifies all the halos above 1.0e10 (that's hard coded) and calculates all of the things
     #that are hi-res and then returns the center of the highest mass halo that doesn't have a low res particle
     #within Rvir
-
-    print '''##################################################################################'''
-    print '''#NOTE: THIS THING IS GOING TO IDENTIFY THE MOST MASSIVE HIGH RES HALO AS THE HOST#'''
-    print '''##################################################################################'''
 
     halo_dict = Load_Halo_Data(halo_file) #load in the rockstar file
     PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True) #load in the particle data
@@ -156,15 +148,16 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False):
                 center_hi_res = center
                 closest_low_res = min(low_res_dist)/R_gal
                 vel_hi_res = vel_gal
-        print '\n '
-        print 'total number of large galaxies: {0:d}'.format(len(mass_rock_select))
-        print 'total number of high res galaxies: {0:d}'.format(len(total_hi_res))
-        print '\n'
-        print '{:#^30} \n'.format('HOST PROPERTIES')
-        print 'id_gal: '+str(id_hi_res)
-        print 'mass: '+'{0:.2e} Msun'.format(M_hi_res)
-        print 'radius: '+'{0:.2e} kpc'.format(rvir_hi_res)
-        print 'closest low res particle: {0:d} Rvir '.format(int(closest_low_res))
+        if print_values==True:
+            print '\n '
+            print 'total number of large galaxies: {0:d}'.format(len(mass_rock_select))
+            print 'total number of high res galaxies: {0:d}'.format(len(total_hi_res))
+            print '\n'
+            print '{:#^30} \n'.format('HOST PROPERTIES')
+            print 'id_gal: '+str(id_hi_res)
+            print 'mass: '+'{0:.2e} Msun'.format(M_hi_res)
+            print 'radius: '+'{0:.2e} kpc'.format(rvir_hi_res)
+            print 'closest low res particle: {0:d} Rvir '.format(int(closest_low_res))
 
     #return 'hosts' center and Rvir
     if add_velocity == False:
@@ -172,7 +165,7 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False):
     else:
         return center_hi_res, rvir_hi_res, vel_hi_res
 
-def galaxy_statistics(giz_hdf5,halo_file):
+def galaxy_statistics(giz_hdf5,halo_file,print_values=False):
     import numpy as np
     import yt, h5py, re, os
     from math import log10
@@ -204,10 +197,11 @@ def galaxy_statistics(giz_hdf5,halo_file):
     galaxy_star_part_FeH = star_Fe_H[star_dist_mask]
     galaxy_gas_mass = gas_masses[gas_dist_mask]
 
-    print '{:#^30} \n'.format('This returns a list of ages and FeH for stars in Rvir')
+    if print_values==True:
+        print '{:#^30} \n'.format('This returns a list of ages and FeH for stars in Rvir')
 
-    print 'Galaxy stellar mass (in Rvir) is: {0:.2e}'.format(sum(galaxy_star_parts_mass))
-    print 'Galaxy gas mass (in Rvir) is: {0:.2e}'.format(sum(galaxy_gas_mass))
+        print 'Galaxy stellar mass (in Rvir) is: {0:.2e}'.format(sum(galaxy_star_parts_mass))
+        print 'Galaxy gas mass (in Rvir) is: {0:.2e}'.format(sum(galaxy_gas_mass))
 
     agebins = np.linspace(0.0,14.0,100)
     cosmo = FlatLambdaCDM(H0=70.2,Om0=0.266,Ob0=0.0449,Neff=0.963) #THIS SHOULDN'T BE HARD CODED
