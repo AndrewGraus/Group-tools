@@ -77,8 +77,6 @@ def Load_Halo_Data(giz_halo_file,h=0.702):
     
     f_rock = np.loadtxt(giz_halo_file)
 
-    print len(f_rock[0])
-
     assert len(f_rock[0]) == 53
 
     id_rock = f_rock[:,0]
@@ -148,16 +146,16 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False):
                 center_hi_res = center
                 closest_low_res = min(low_res_dist)/R_gal
                 vel_hi_res = vel_gal
-        if print_values==True:
-            print '\n '
-            print 'total number of large galaxies: {0:d}'.format(len(mass_rock_select))
-            print 'total number of high res galaxies: {0:d}'.format(len(total_hi_res))
-            print '\n'
-            print '{:#^30} \n'.format('HOST PROPERTIES')
-            print 'id_gal: '+str(id_hi_res)
-            print 'mass: '+'{0:.2e} Msun'.format(M_hi_res)
-            print 'radius: '+'{0:.2e} kpc'.format(rvir_hi_res)
-            print 'closest low res particle: {0:d} Rvir '.format(int(closest_low_res))
+    if print_values==True:
+        print '\n '
+        print 'total number of large galaxies: {0:d}'.format(len(mass_rock_select))
+        print 'total number of high res galaxies: {0:d}'.format(len(total_hi_res))
+        print '\n'
+        print '{:#^30} \n'.format('HOST PROPERTIES')
+        print 'id_gal: '+str(id_hi_res)
+        print 'mass: '+'{0:.2e} Msun'.format(M_hi_res)
+        print 'radius: '+'{0:.2e} kpc'.format(rvir_hi_res)
+        print 'closest low res particle: {0:d} Rvir '.format(int(closest_low_res))
 
     #return 'hosts' center and Rvir
     if add_velocity == False:
@@ -170,7 +168,7 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False):
     import yt, h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
-    from andrew_tools.simple_tools import get_distance
+    from andrew_hydro_sim_modules.simple_tools import get_distance
     
     #print some simple stats of the galaxy, and then return the star particles within Rvir
     #specifically their ages (to compute SFHs) and FeH.
@@ -204,8 +202,13 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False):
         print 'Galaxy gas mass (in Rvir) is: {0:.2e}'.format(sum(galaxy_gas_mass))
 
     agebins = np.linspace(0.0,14.0,100)
-    cosmo = FlatLambdaCDM(H0=70.2,Om0=0.266,Ob0=0.0449,Neff=0.963) #THIS SHOULDN'T BE HARD CODED
-    star_age_gal_T = [cosmo.age(1.0/xx - 1.0).value for xx in galaxy_star_part_ages] #converts scale factor to time given cosmology
+    cosmo = FlatLambdaCDM(H0=70.2,Om0=0.266) #THIS SHOULDN'T BE HARD CODED
+    
+    #theres this annoying thing where the age is a float so .value doesn't work in older versions of astropy
+
+    star_age_gal_T = [cosmo.age(1.0/xx - 1.0) for xx in galaxy_star_part_ages] #converts scale factor to time given cosmology
+
+    #star_age_gal_T = [cosmo.age(1.0/xx - 1.0).value for xx in galaxy_star_part_ages] #converts scale factor to time given cosmology
 
     return star_age_gal_T, galaxy_star_part_FeH
 
@@ -217,7 +220,7 @@ def principle_axes(coordinates,masses,center,rad):
     import yt, h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
-    from andrew_tools.simple_tools import get_distance_vector, get_distance
+    from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
 
     dm_dist_val = get_distance(coordinates, center)
 
@@ -298,7 +301,7 @@ def Calc_average_L(coordinates,masses,velocities,rad,center=[0.0,0.0,0.0],host_v
     import yt, h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
-    from andrew_tools.simple_tools import get_distance_vector, get_distance
+    from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
 
     dm_dist_val = get_distance(coordinates, center)
 
@@ -323,7 +326,7 @@ def Calc_average_L_shift(coordinates,masses,velocities):
     import yt, h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
-    from andrew_tools.simple_tools import get_distance_vector, get_distance
+    from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
 
     coord_mod = coordinates
     mass_mod = masses
@@ -426,7 +429,7 @@ def Rotate_to_z_axis(coordinates,velocities,rotation_axis):
     import yt, h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
-    from andrew_tools.simple_tools import get_distance_vector, get_distance
+    from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
     #Okay I want to take in a "z" axis, and then rotate the
     #coordinates so that that is the z axis
     #then calculate velocity vectors in that frame and
@@ -443,9 +446,6 @@ def Rotate_to_z_axis(coordinates,velocities,rotation_axis):
     coord_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in coordinates])
     vel_rotate = np.asarray([R2.dot(R1.dot(xx)) for xx in velocities])
 
-    print coord_rotate.shape
-    print len(coord_rotate[0])
-
     return coord_rotate, vel_rotate
     
 def report_velocities(giz_hdf5,halo_file,add_dm=True,add_gas=False,add_stars=False,add_low_res=False,vector=None,report_vel=True):
@@ -453,7 +453,7 @@ def report_velocities(giz_hdf5,halo_file,add_dm=True,add_gas=False,add_stars=Fal
     import yt, h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
-    from andrew_tools.simple_tools import get_distance_vector, get_distance
+    from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
     #1) calculate host halo
     #2) calculate average L
     #3) rotate to L
