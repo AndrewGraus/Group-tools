@@ -126,7 +126,7 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
 
     M_hi_res = 0.0
     total_hi_res = []
-    closest_low_res = []
+    closest_low_res_list = []
 
     for j in range(len(mass_rock_select)):
         center = center_rock_select[j]
@@ -139,7 +139,7 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
         if min(low_res_dist) > R_gal:
             #count the total number of high res halos above 1e10
             total_hi_res.append(id_gal)
-            closest_low_res.append(min(low_res_dist)/R_gal)
+            closest_low_res_list.append(min(low_res_dist)/R_gal)
             if mass_gal > M_hi_res:
                 #if this is the most massive hi res halo record some stats
                 M_hi_res = mass_gal
@@ -162,7 +162,7 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
     #return 'hosts' center and Rvir
 
     if print_hi_res_halos==True:
-        return total_hi_res, closest_low_res
+        return total_hi_res, closest_low_res_list
     if add_velocity == False:
         return center_hi_res, rvir_hi_res
     else:
@@ -493,7 +493,7 @@ def Rotate_to_z_axis(coordinates,velocities,rotation_axis):
 
     return coord_rotate, vel_rotate
     
-def report_velocities(giz_hdf5,halo_file,add_dm=True,add_gas=False,add_stars=False,add_low_res=False,vector=None,report_vel=True):
+def report_velocities(giz_hdf5,halo_file,add_dm=True,add_gas=False,add_stars=False,add_low_res=False,vector=None,report_vel=True,halo_id=None):
     import numpy as np
     import yt, h5py, re, os
     from math import log10
@@ -506,7 +506,10 @@ def report_velocities(giz_hdf5,halo_file,add_dm=True,add_gas=False,add_stars=Fal
 
     #1) calculate host halo
 
-    host_center, host_rvir, host_vel = Identify_Host(giz_hdf5,halo_file,add_velocity=True)
+    if halo_id == None:
+        host_center, host_rvir, host_vel = Identify_Host(giz_hdf5,halo_file,add_velocity=True)
+    else:
+        host_center, host_rvir, host_vel = return_specific_halo(halo_file,int(halo_id))
 
     #2) calculate average L
     PD_dict = Load_Particle_Data(giz_hdf5,add_dm=add_dm,add_gas=add_gas,add_stars=add_stars)
