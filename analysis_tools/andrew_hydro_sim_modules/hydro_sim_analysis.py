@@ -91,7 +91,7 @@ def Load_Halo_Data(giz_halo_file,h=0.702):
 
     return {'ids':id_rock, 'masses':M_rock, 'rvir':Rvir_rock, 'rmax':Rmax_rock, 'vmax':Vmax_rock, 'centers':centers_rock,'velocities':velocity_rock}
 
-def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False):
+def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print_hi_res_halos=False):
     import numpy as np
     import yt, h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -126,6 +126,7 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False):
 
     M_hi_res = 0.0
     total_hi_res = []
+    closest_low_res = []
 
     for j in range(len(mass_rock_select)):
         center = center_rock_select[j]
@@ -137,7 +138,8 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False):
         low_res_dist = np.sqrt((center[0]-low_res_coords[:,0])**2.0+(center[1]-low_res_coords[:,1])**2.0+(center[2]-low_res_coords[:,2])**2.0)
         if min(low_res_dist) > R_gal:
             #count the total number of high res halos above 1e10
-            total_hi_res.append(1)
+            total_hi_res.append(id_gal)
+            closest_low_res.append(min(low_res_dist)/R_gal)
             if mass_gal > M_hi_res:
                 #if this is the most massive hi res halo record some stats
                 M_hi_res = mass_gal
@@ -158,12 +160,52 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False):
         print 'closest low res particle: {0:d} Rvir '.format(int(closest_low_res))
 
     #return 'hosts' center and Rvir
+
+    if print_hi_res_halos==True:
+        return total_hi_res, closest_low_res
     if add_velocity == False:
         return center_hi_res, rvir_hi_res
     else:
         return center_hi_res, rvir_hi_res, vel_hi_res
 
-def galaxy_statistics(giz_hdf5,halo_file,print_values=False):
+def return_specific_halo(halo_file,halo_id):
+    #given a rockstar halo file and an id 
+    #it will return that halo's center, virial radius, and velocity
+    import numpy as np
+    import yt, h5py, re, os
+    from astropy.cosmology import FlatLambdaCDM
+
+    #This script identifies all the halos above 1.0e10 (that's hard coded) and calculates all of the things
+    #that are hi-res and then returns the center of the highest mass halo that doesn't have a low res particle
+    #within Rvir
+
+    halo_dict = Load_Halo_Data(halo_file) #load in the rockstar filw
+
+    id_rock = halo_dict['ids'] 
+    M_rock = halo_dict['masses']
+    Vmax_rock = halo_dict['vmax']
+    Rvir_rock = halo_dict['rvir']
+    Rmax_rock = halo_dict['rmax']
+    centers_rock = halo_dict['centers']
+    velocities_rock = halo_dict['velocities']
+
+    id_select = (id_rock==halo_id) #This is hard coded in
+
+    id_rock_select = id_rock[id_select]
+    mass_rock_select = M_rock[id_select]
+    vmax_rock_select = Vmax_rock[id_select]
+    rvir_rock_select = Rvir_rock[id_select]
+    rmax_rock_select = Rmax_rock[id_select]
+    center_rock_select = centers_rock[id_select]
+    velocities_rock_select = velocities_rock[id_select]
+
+    print 'id_gal: '+str(id_rock_select[0])
+    print 'mass: '+'{0:.2e} Msun'.format(mass_rock_select[0])
+    print 'radius: '+'{0:.2e} kpc'.format(rvir_rock_select[0])
+
+    return center_rock_select[0], rvir_rock_select[0], velocities_rock_select[0]
+
+def galaxy_statistics(giz_hdf5,halo_file,print_values=False,halo_id=None):
     import numpy as np
     import yt, h5py, re, os
     from math import log10
@@ -172,8 +214,11 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False):
     
     #print some simple stats of the galaxy, and then return the star particles within Rvir
     #specifically their ages (to compute SFHs) and FeH.
-    host_center, host_rvir = Identify_Host(giz_hdf5,halo_file)
-    
+    if halo_id == None:
+        host_center, host_rvir = Identify_Host(giz_hdf5,halo_file)
+    else:
+        host_center, host_rvir, host_vel = return_specific_halo(halo_file,int(halo_id))
+
     PD_dict = Load_Particle_Data(giz_hdf5,add_dm=False,add_gas=True,add_stars=True)
 
     star_coords = PD_dict['star']['coords']
