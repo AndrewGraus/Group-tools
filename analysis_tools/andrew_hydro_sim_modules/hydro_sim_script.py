@@ -37,7 +37,7 @@ andrew_hydro_sim_modules.hydro_sim_analysis.Identify_Host(particle_file, halo_fi
 star_age_T, star_FeH = andrew_hydro_sim_modules.hydro_sim_analysis.galaxy_statistics(particle_file, halo_file, print_values=True)
 
 np.savetxt(plot_dir+'/'+str(halo_num)+'_star_ages.txt',np.asarray(star_age_T))
-np.savetxt(plot_dir+'/'+str(halo_num)+'_star_FeH.txt',np.asarray(star_age_FeH)) 
+np.savetxt(plot_dir+'/'+str(halo_num)+'_star_FeH.txt',np.asarray(star_FeH)) 
 
 # plot SFH and MDF
 
