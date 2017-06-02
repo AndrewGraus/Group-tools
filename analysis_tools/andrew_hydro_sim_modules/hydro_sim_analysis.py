@@ -91,7 +91,7 @@ def Load_Halo_Data(giz_halo_file,h=0.702):
 
     return {'ids':id_rock, 'masses':M_rock, 'rvir':Rvir_rock, 'rmax':Rmax_rock, 'vmax':Vmax_rock, 'centers':centers_rock,'velocities':velocity_rock}
 
-def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print_hi_res_halos=False):
+def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print_hi_res_halos=False,subhalo_limit=10*10.0):
     import numpy as np
     import yt, h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -99,6 +99,13 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
     #This script identifies all the halos above 1.0e10 (that's hard coded) and calculates all of the things
     #that are hi-res and then returns the center of the highest mass halo that doesn't have a low res particle
     #within Rvir
+
+    #NOTE: the plan is to make this a legacy function because I need it to do more stuff
+    #but I'm leaving it in here because I might have used it in some previous program
+    #and if I delete this / modify it it may break those
+    #
+    #There's nothing wrong with it, but I want to have it return more values without
+    #having to add in a bunch of additional options
 
     halo_dict = Load_Halo_Data(halo_file) #load in the rockstar file
     PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True) #load in the particle data
@@ -111,7 +118,7 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
     centers_rock = halo_dict['centers']
     velocities_rock = halo_dict['velocities']
 
-    mass_select = (M_rock>1.0e10) #This is hard coded in
+    mass_select = (M_rock>subhalo_limit) #This is hard coded in
 
     id_rock_select = id_rock[mass_select]
     mass_rock_select = M_rock[mass_select]
@@ -167,6 +174,103 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
         return center_hi_res, rvir_hi_res
     else:
         return center_hi_res, rvir_hi_res, vel_hi_res
+
+def Identify_Host_and_Subhalos(giz_hdf5,halo_file,subhalo_limit=10*10.0):
+    import numpy as np
+    import yt, h5py, re, os
+    from astropy.cosmology import FlatLambdaCDM
+
+    #This script identifies all the halos above 1.0e10 (that's hard coded) and calculates all of the things
+    #that are hi-res and then returns the center of the highest mass halo that doesn't have a low res particle
+    #within Rvir
+
+    halo_dict = Load_Halo_Data(halo_file) #load in the rockstar file
+    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True) #load in the particle data
+
+    id_rock = halo_dict['ids'] 
+    M_rock = halo_dict['masses']
+    Vmax_rock = halo_dict['vmax']
+    Rvir_rock = halo_dict['rvir']
+    Rmax_rock = halo_dict['rmax']
+    centers_rock = halo_dict['centers']
+    velocities_rock = halo_dict['velocities']
+
+    mass_select = (M_rock>subhalo_limit) #This is hard coded in
+
+    id_rock_select = id_rock[mass_select]
+    mass_rock_select = M_rock[mass_select]
+    vmax_rock_select = Vmax_rock[mass_select]
+    rvir_rock_select = Rvir_rock[mass_select]
+    rmax_rock_select = Rmax_rock[mass_select]
+    center_rock_select = centers_rock[mass_select]
+    velocities_rock_select = velocities_rock[mass_select]
+
+    particle_coords = PD_dict['halo']['coords'] #grab hi and low res particles
+    low_res_coords = PD_dict['disk']['coords']
+
+    M_hi_res = 0.0
+    total_hi_res = []
+    closest_low_res_list = []
+    hi_res_masses = []
+    hi_res_X, hi_res_Y, hi_res_Z = [],[],[]
+    hi_res_rvir = []
+    hi_res_rmax = []
+    hi_res_vmax = []
+
+    for j in range(len(mass_rock_select)):
+        center = center_rock_select[j]
+        R_gal = rvir_rock_select[j]
+        id_gal = id_rock_select[j]
+        mass_gal = mass_rock_select[j]
+        vel_gal = velocities_rock_select[j]
+        vmax_gal = vmax_rock_select[j]
+        rmax_gal = rmax_rock_select[j]
+
+        low_res_dist = np.sqrt((center[0]-low_res_coords[:,0])**2.0+(center[1]-low_res_coords[:,1])**2.0+(center[2]-low_res_coords[:,2])**2.0)
+        if min(low_res_dist) > R_gal:
+            #count the total number of high res halos above 1e10
+            total_hi_res.append(id_gal)
+            hi_res_masses.append(mass_gal)
+            hi_res_rvir.append(R_gal)
+            hi_res_rmax.append(rmax_gal)
+            hi_res_vmax.append(vmax_gal)
+            hi_res_X.append(center[0])
+            hi_res_Y.append(center[1])
+            hi_res_Z.append(center[2])
+            closest_low_res_list.append(min(low_res_dist)/R_gal)
+            if mass_gal > M_hi_res:
+                #if this is the most massive hi res halo record some stats
+                M_hi_res = mass_gal
+                id_hi_res = id_gal
+                rvir_hi_res = R_gal
+                center_hi_res = center
+                closest_low_res = min(low_res_dist)/R_gal
+                vel_hi_res = vel_gal
+    if print_values==True:
+        print '\n '
+        print 'total number of large galaxies: {0:d}'.format(len(mass_rock_select))
+        print 'total number of high res galaxies: {0:d}'.format(len(total_hi_res))
+        print '\n'
+        print '{:#^30} \n'.format('HOST PROPERTIES')
+        print 'id_gal: '+str(id_hi_res)
+        print 'mass: '+'{0:.2e} Msun'.format(M_hi_res)
+        print 'radius: '+'{0:.2e} kpc'.format(rvir_hi_res)
+        print 'closest low res particle: {0:d} Rvir '.format(int(closest_low_res))
+
+    sub_distances = [np.sqrt((hi_res_X[xx]-center_hi_res[0])**2.0+(hi_res_Y[xx]-center_hi_res[1])**2.0+(hi_res_Z[xx]-center_hi_res[2])**2.0) for xx in range(len(hi_res_X))]
+    
+    halos_matrix = np.zeros((len(hi_res_X),9))
+    halos_matrix[:,0] = total_hi_res
+    halos_matrix[:,1] = hi_res_masses
+    halos_matrix[:,2] = hi_res_rvir
+    halos_matrix[:,3] = hi_res_rmax
+    halos_matrix[:,4] = hi_res_vmax
+    halos_matrix[:,5] = sub_distances
+    halos_matrix[:,6] = hi_res_X
+    halos_matrix[:,7] = hi_res_Y
+    halos_matrix[:,8] = hi_res_Z
+
+    return halos_matrix
 
 def return_specific_halo(halo_file,halo_id):
     #given a rockstar halo file and an id 
