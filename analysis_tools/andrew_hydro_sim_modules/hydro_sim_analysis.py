@@ -175,7 +175,7 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
     else:
         return center_hi_res, rvir_hi_res, vel_hi_res
 
-def Identify_Host_and_Subhalos(giz_hdf5,halo_file,subhalo_limit=10*10.0):
+def Identify_Host_and_Subhalos(giz_hdf5,halo_file,print_values=True,subhalo_limit=10*10.0):
     import numpy as np
     import yt, h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -259,7 +259,7 @@ def Identify_Host_and_Subhalos(giz_hdf5,halo_file,subhalo_limit=10*10.0):
 
     sub_distances = [np.sqrt((hi_res_X[xx]-center_hi_res[0])**2.0+(hi_res_Y[xx]-center_hi_res[1])**2.0+(hi_res_Z[xx]-center_hi_res[2])**2.0) for xx in range(len(hi_res_X))]
     
-    halos_matrix = np.zeros((len(hi_res_X),9))
+    halos_matrix = np.zeros((len(hi_res_X),13))
     halos_matrix[:,0] = total_hi_res
     halos_matrix[:,1] = hi_res_masses
     halos_matrix[:,2] = hi_res_rvir
@@ -336,8 +336,8 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False,halo_id=None):
     star_dists = get_distance(star_coords,host_center)
     gas_dists = get_distance(gas_coords,host_center)
 
-    star_dist_mask = (star_dists<=host_rvir)
-    gas_dist_mask = (gas_dists<=host_rvir)
+    star_dist_mask = (star_dists<=0.1*host_rvir)
+    gas_dist_mask = (gas_dists<=0.1*host_rvir)
 
     galaxy_star_parts_mass = star_masses[star_dist_mask]
     galaxy_star_part_ages = star_age[star_dist_mask]
@@ -359,7 +359,7 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False,halo_id=None):
 
     #star_age_gal_T = [cosmo.age(1.0/xx - 1.0).value for xx in galaxy_star_part_ages] #converts scale factor to time given cosmology
 
-    return star_age_gal_T, galaxy_star_part_FeH
+    return star_age_gal_T, galaxy_star_part_FeH, galaxy_star_parts_mass, galaxy_gas_mass
 
 def principle_axes(coordinates,masses,center,rad):
     #This code calculates principle axes of a given star particle
