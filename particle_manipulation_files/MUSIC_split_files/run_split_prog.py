@@ -16,13 +16,13 @@ total_part = sys.argv[2]
 
 split_files=[]
 
-if total_part==4:
+if total_part=='4':
     path_to_split = '/home/agraus/code/Group-tools/particle_manipulation_files/MUSIC_split_files/split_gb.py'
-elif total_part==5:
+elif total_part=='5':
     path_to_split = '/home/agraus/code/Group-tools/particle_manipulation_files/MUSIC_split_files/split_gb_5to4.py'
-elif total_part==6:
+elif total_part=='6':
     path_to_split = '/home/agraus/code/Group-tools/particle_manipulation_files/MUSIC_split_files/split_gb_6to4.py'
-elif total_part==7:
+elif total_part=='7':
     path_to_split = '/home/agraus/code/Group-tools/particle_manipulation_files/MUSIC_split_files/split_gb_7to4.py'
 
 #loop over files in directory and check if they are
