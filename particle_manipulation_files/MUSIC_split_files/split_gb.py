@@ -1,10 +1,10 @@
-#!/bin/python
-
-import struct,sys
-from numpy import fromstring,array
+#!/usr/bin/env python
+import struct
+import numpy as np
+from numpy import fromstring
 
 def read_gbin(fname,verbose=False):
-    print "\nOpening "+fname    
+    print "\nOpening "+fname
     f = open(fname,'rb')
 
     #First read the header so I know how many particles of each type I have
@@ -14,7 +14,7 @@ def read_gbin(fname,verbose=False):
     nfile = struct.unpack('<6I',f.read(24)) #Number of particles in this file
 
     masstable = struct.unpack('<6d',f.read(48))  #masses of the particle groups
-        
+
     a = struct.unpack('<d',f.read(8))[0]        #expansion factor
     z = struct.unpack('<d',f.read(8))[0]        #redshift
 
@@ -22,7 +22,7 @@ def read_gbin(fname,verbose=False):
     flag_feed = struct.unpack('<i',f.read(4))[0] #feedback included?
 
     ntot = struct.unpack('<6i',f.read(24))      #total number of particles in the simulation (= nfile if numfiles == 1)
-        
+
     flag_cool = struct.unpack('<i',f.read(4))[0]  #cooling included?
     numfiles = struct.unpack('<i',f.read(4))[0]   #number of files in each snapshot
     boxsize = struct.unpack('<d',f.read(8))[0] #Size of the box, if periodic
@@ -37,27 +37,31 @@ def read_gbin(fname,verbose=False):
 
     f.seek(264,0)   #Moves to the end of the header (and block that tells you size of header)
 
-    header = [nfile,masstable,a,z,flag_sfr,flag_feed,ntot,flag_cool,numfiles,boxsize,omega0,omegaL,h,flag_age,flag_metals,nhighword,flag_entropy]
-    
-    gas,halo,disk,bulge,star,bndry = [],[],[],[],[],[]
+    header = {'NumPart_ThisFile':nfile,'MassTable':masstable,'Time':a,'Redshift':z,'Flag_Sfr':flag_sfr,'Flag_Feedback':flag_feed,
+    'NumPart_Total':ntot,'Flag_Cooling':flag_cool,'NumFilesPerSnapshot':numfiles,'BoxSize':boxsize,'Omega0':omega0,'OmegaLambda':omegaL,
+    'HubbleParam':h,'Flag_StellarAge':flag_age,'Flag_Metals':flag_metals,'NumPart_Total_HW':nhighword,'Flag_Entropy_ICs':flag_entropy}
+
+    # header = [nfile,masstable,a,z,flag_sfr,flag_feed,ntot,flag_cool,numfiles,boxsize,omega0,omegaL,h,flag_age,flag_metals,nhighword,flag_entropy]
+
+    gas,halo,disk,bulge,star,bndry = {},{},{},{},{},{}
     ngas = nfile[0]
     nhalo = nfile[1]
     ndisk = nfile[2]
     nbulge = nfile[3]
     nstar = nfile[4]
     nbndry = nfile[5]
-    
+
     print "Reading coordinates"
     coord_size = struct.unpack('<I',f.read(4))[0]
-    
-    gas.append(fromstring(f.read(12*ngas),dtype='f').reshape((-1,3)))
-    halo.append(fromstring(f.read(12*nhalo),dtype='f').reshape((-1,3)))
-    disk.append(fromstring(f.read(12*ndisk),dtype='f').reshape((-1,3)))
+
+    gas['Coordinates'] = fromstring(f.read(12*ngas),dtype='f').reshape((-1,3))
+    halo['Coordinates'] = fromstring(f.read(12*nhalo),dtype='f').reshape((-1,3))
+    disk['Coordinates'] = fromstring(f.read(12*ndisk),dtype='f').reshape((-1,3))
     print "Read coordinates for {0} of {1} particles".format(ngas+nhalo+ndisk,sum(nfile))
-    bulge.append(fromstring(f.read(12*nbulge),dtype='f').reshape((-1,3)))
-    star.append(fromstring(f.read(12*nstar),dtype='f').reshape((-1,3)))
-    bndry.append(fromstring(f.read(12*nbndry),dtype='f').reshape((-1,3)))
-    
+    bulge['Coordinates'] = fromstring(f.read(12*nbulge),dtype='f').reshape((-1,3))
+    star['Coordinates'] = fromstring(f.read(12*nstar),dtype='f').reshape((-1,3))
+    bndry['Coordinates'] = fromstring(f.read(12*nbndry),dtype='f').reshape((-1,3))
+
     if struct.unpack('<I',f.read(4))[0] != coord_size:
         raise StandardError("The block size at the end of the coordinate block doesn't match that at the beginning.  This is an issue.")
 
@@ -65,13 +69,13 @@ def read_gbin(fname,verbose=False):
     vel_size = struct.unpack('<I',f.read(4))[0]
     print "Reading velocities"
 
-    gas.append(fromstring(f.read(12*ngas),dtype='f').reshape((-1,3)))
-    halo.append(fromstring(f.read(12*nhalo),dtype='f').reshape((-1,3)))
-    disk.append(fromstring(f.read(12*ndisk),dtype='f').reshape((-1,3)))
-    print "Read velocities for {0} of {1} particles".format(ngas+nhalo+ndisk,sum(nfile))
-    bulge.append(fromstring(f.read(12*nbulge),dtype='f').reshape((-1,3)))
-    star.append(fromstring(f.read(12*nstar),dtype='f').reshape((-1,3)))
-    bndry.append(fromstring(f.read(12*nbndry),dtype='f').reshape((-1,3)))
+    gas['Velocities'] = fromstring(f.read(12*ngas),dtype='f').reshape((-1,3))
+    halo['Velocities'] = fromstring(f.read(12*nhalo),dtype='f').reshape((-1,3))
+    disk['Velocities'] = fromstring(f.read(12*ndisk),dtype='f').reshape((-1,3))
+    print "Read coordinates for {0} of {1} particles".format(ngas+nhalo+ndisk,sum(nfile))
+    bulge['Velocities'] = fromstring(f.read(12*nbulge),dtype='f').reshape((-1,3))
+    star['Velocities'] = fromstring(f.read(12*nstar),dtype='f').reshape((-1,3))
+    bndry['Velocities'] = fromstring(f.read(12*nbndry),dtype='f').reshape((-1,3))
 
     if struct.unpack('<I',f.read(4))[0] != vel_size:   #And read the size of the block again.
         raise StandardError("The block size at the end of the velocity block doesn't match that at the beginning.  This is an issue.")
@@ -79,62 +83,54 @@ def read_gbin(fname,verbose=False):
     #Next up are the particle IDs, which are unsigned integers.
     id_size = struct.unpack('<I',f.read(4))[0]
     print "Reading particle IDs"
-    gas.append(fromstring(f.read(4*ngas),dtype='I'))
-    halo.append(fromstring(f.read(4*nhalo),dtype='I'))
-    disk.append(fromstring(f.read(4*ndisk),dtype='I'))
+    gas['ParticleIDs'] = fromstring(f.read(4*ngas),dtype='I')
+    halo['ParticleIDs'] = fromstring(f.read(4*nhalo),dtype='I')
+    disk['ParticleIDs'] = fromstring(f.read(4*ndisk),dtype='I')
     print "Read IDs for {0} of {1} particles".format(ngas+nhalo+ndisk,sum(nfile))
-    bulge.append(fromstring(f.read(4*nbulge),dtype='I'))
-    star.append(fromstring(f.read(4*nstar),dtype='I'))
-    bndry.append(fromstring(f.read(4*nbndry),dtype='I'))
+    bulge['ParticleIDs'] = fromstring(f.read(4*nbulge),dtype='I')
+    star['ParticleIDs'] = fromstring(f.read(4*nstar),dtype='I')
+    bndry['ParticleIDs'] = fromstring(f.read(4*nbndry),dtype='I')
 
     if struct.unpack('<I',f.read(4))[0] != id_size:   #And read the size of the block again.
         raise StandardError("The block size at the end of the IDs block doesn't match that at the beginning.  This is an issue.")
 
-    #Now I have to do the mass block.  Do this by checking if there are particles in a block that have a zero in the mass table.    
-    if (ngas > 0 and masstable[0] == 0) or (nhalo > 0 and masstable[1] == 0) or (ndisk > 0 and masstable[2] == 0) or (nbulge > 0 and masstable[3] == 0) or (nstar > 0 and masstable[4] == 0) or (nbndry > 0 and masstable[5] == 0):
+    #Now I have to do the mass block.  Do this by checking if there are particles in a block that have a zero in the mass table.
+    if True in [(nfile[ii] > 0 and masstable[ii] == 0) for ii in range(len(nfile))]:
     #In other words, only read the size of the mass block if there is a mass block (for any of the groups)
         mass_size = struct.unpack('<I',f.read(4))[0]
-        
+
         if ngas > 0 and masstable[0] == 0:    #There are particles in the group, but their masses aren't in the header (so they must be in the file)
             print "Reading variable masses for gas group"
-            gas.append(fromstring(f.read(4*ngas),dtype='f'))
-            gasmass = True
-        else:
-            gasmass = False
-
+            gas['Masses'] = fromstring(f.read(4*ngas),dtype='f')
         if nhalo > 0 and masstable[1] == 0:
             print "Reading variable masses for halo group"
-            halo.append(fromstring(f.read(4*nhalo),dtype='f'))
+            halo['Masses'] = fromstring(f.read(4*nhalo),dtype='f')
         if ndisk > 0 and masstable[2] == 0:
             print "Reading variable masses for disk group"
-            disk.append(fromstring(f.read(4*ndisk),dtype='f'))
+            disk['Masses'] = fromstring(f.read(4*ndisk),dtype='f')
         if nbulge > 0 and masstable[3] == 0:
             print "Reading variable masses for bulge group"
-            bulge.append(fromstring(f.read(4*nbulge),dtype='f'))
+            bulge['Masses'] = fromstring(f.read(4*nbulge),dtype='f')
         if nstar > 0 and masstable[4] == 0:
             print "Reading variable masses for star group"
-            star.append(fromstring(f.read(4*nstar),dtype='f'))
+            star['Masses'] = fromstring(f.read(4*nstar),dtype='f')
         if nbndry > 0 and masstable[5] == 0:
             print "Reading variable masses for boundary group"
-            bndry.append(fromstring(f.read(4*nbndry),dtype='f'))
-            
+            bndry['Masses'] = fromstring(f.read(4*nbndry),dtype='f')
+
         if struct.unpack('<I',f.read(4))[0] != mass_size:   #And read the size of the block again.
             raise StandardError("The block size at the end of the mass block doesn't match that at the beginning.  This is an issue.")
 
-
+    #Put all this inside the if statement because I don't want it reading block sizes for gas blocks if there is no gas data (cause then there will be no block size and I will accidentally read into other data or past the end of the file.)
     if ngas > 0:
         print "Reading gas specific data."
-        
-        #Put all this inside the if statement because I don't want it reading block sizes for gas blocks if there is no gas data (cause then there will be no block size and I will accidentally read into other data or past the end of the file.)
-        
         #Internal energy:
         u_size = struct.unpack('<I',f.read(4))[0]
-        gas.append(fromstring(f.read(4*ngas),dtype='f'))
+        gas['InternalEnergy'] = fromstring(f.read(4*ngas),dtype='f')
         if struct.unpack('<I',f.read(4))[0] != u_size:
             raise StandardError("The block size at the end of the internal energy block doesn't match that at the beginning.  This is an issue.")
         print "Read gas internal energy; not attempting to read gas density or smoothing length because this is assumed to be an IC file"
-        
-        
+
     current_pos = f.tell()
     f.seek(0,2) #Jump to the end of the file
     if current_pos == f.tell():
@@ -143,247 +139,265 @@ def read_gbin(fname,verbose=False):
         print "Completed reading "+fname+" but there remain {0} bytes at the end of the file unread.".format(f.tell()-current_pos)
     f.close()
 
-    return [header,gas,halo,disk,bulge,star,bndry,gasmass]
+    return {'Header':header,'PartType0':gas,'PartType1':halo,'PartType2':disk,'PartType3':bulge,'PartType4':star,'PartType5':bndry}
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print "Usage:  python split_gb.py <input file> <output file>"
-        sys.exit(1337)
 
-    [header,gasdata,halodata,diskdata,bulgedata,stardata,bndrydata,gasmass] = read_gbin(sys.argv[1],verbose=True)
 
-    if len(diskdata[0]) > 0 or len(bulgedata[0]) > 0:
-        print "There are already particles in either disk or bulge.  Exiting."
-        sys.exit(1337)
+if __name__ == '__main__':
+    import sys
+    from optparse import OptionParser
 
-    #My goal is to leave gasdata, halo, and stars unchanged, but split the bndry group into disk, bulge, and bndry based on masses
+    parser = OptionParser(usage="%prog <inname> <outname> [options]")
 
-    allbndrypos = bndrydata[0]
-    allbndryvel = bndrydata[1]
-    allbndryid = bndrydata[2]
-    allbndrymass = bndrydata[3]
+    parser.add_option('--usebh',dest='usebh',help="Put particles in BH (type 5).  Otherwise, only puts particles in Disk and Bulge",default=False,action="store_true")
+    # parser.add_option('--usestars',dest='usestars',help="Put particles in Stars (type 4).  Otherwise, only puts particles in Disk and Bulge",default=False,action="store_true")
 
-    masses = []
-    
-    print "Finding masses in file."
-    for i in range(len(allbndrymass)):  #Loop through all the particles in the bndry group
-        thismass = allbndrymass[i]
-        if thismass in masses:  continue
-        else:   masses.append(thismass)
-        
-    masses.sort()
+    ops,args = parser.parse_args()
 
-    if len(masses) == 3:
-        diskmass = masses[0]
-        bulgemass = masses[1]
-        bndrymass = masses[2]
-        starmass = 0
-    elif len(masses) == 2:
-        diskmass = masses[0]
-        bulgemass = masses[1]
-        bndrymass = 0
-        starmass = 0
-    elif len(masses) == 1:
-        diskmass = masses[0]
-        bulgemass = 0
-        bndrymass = 0
-        starmass = 0
-    elif len(masses) == 4:
-        print "WARNING:  There are 4 different types of particles, so the star group will be used.  If there's star formation, this won't work well."
-        diskmass = masses[0]
-        bulgemass = masses[1]
-        starmass = masses[2]
-        bndrymass = masses[3]
-    elif len(masses) == 0:
-        print "There don't appear to be any particles with variable masses in the boundary block.  Exiting."
-        sys.exit(1337)
+    try:
+        inname,outname = args
+    except Exception:
+        parser.print_help()
+        sys.exit(1)
+
+    #first check if it's a multi-part file:
+    from glob import glob
+    files = glob(inname+'*')
+    if len(files) > 1:
+        print "Sorry, haven't written this yet!"
+        sys.exit(1)
+
+    data = read_gbin(inname)
+    header = data['Header']
+    #figure out which particle group we're splitting
+    #know we're not splitting gas, halo, or star
+
+    if header['NumPart_Total'][2] > 0:
+        assert header['NumPart_Total'][3] == 0
+        splitto = ['PartType2','PartType3']
+        if ops.usebh:
+            assert header['NumPart_Total'][5] == 0
+            splitto.append('PartType5')
+        tosplit = 'PartType2'
+    elif header['NumPart_Total'][3] > 0:
+        splitto = ['PartType2','PartType3']
+        assert header['NumPart_Total'][2] == 0
+        if ops.usebh: 
+            assert header['NumPart_Total'][5] == 0
+            splitto.append('PartType5')
+        tosplit = 'PartType3'
+    elif header['NumPart_Total'][5] > 0:
+        splitto = ['PartType2','PartType3']
+        assert header['NumPart_Total'][2] == 0
+        assert header['NumPart_Total'][3] == 0
+        tosplit = 'PartType5'
+        if ops.usebh:
+            splitto.append('PartType5')
     else:
-        print "There are more than 4 species of non-high resolution particles; please do this file by hand.  Exiting."
-        sys.exit(1337)
+        print "No particles found in any of the low res groups!"
+        sys.exit(1)
 
-    bndrypos = allbndrypos[allbndrymass == bndrymass]
-    bndryvel = allbndryvel[allbndrymass == bndrymass]
-    bndryID = allbndryid[allbndrymass == bndrymass]
+    splitto.sort()
 
-    diskpos = allbndrypos[allbndrymass == diskmass]
-    diskvel = allbndryvel[allbndrymass == diskmass]
-    diskID = allbndryid[allbndrymass == diskmass]
-    
-    bulgepos = allbndrypos[allbndrymass == bulgemass]
-    bulgevel = allbndryvel[allbndrymass == bulgemass]
-    bulgeID = allbndryid[allbndrymass == bulgemass]
-    
-    starpos = allbndrypos[allbndrymass == starmass]
-    starvel = allbndryvel[allbndrymass == starmass]
-    starID = allbndryid[allbndrymass == starmass]
+    nfile = np.array(header['NumPart_ThisFile'],copy=True)
+    ntot = np.array(header['NumPart_Total'],copy=True)
+    mtable = np.array(header['MassTable'],copy=True)
+    assert (nfile == ntot).all()
 
-    ndisk = len(diskpos)
-    nbulge = len(bulgepos)
-    nbndry = len(bndrypos)
-    nstar = len(starpos)
-    
-    if nstar > 0 and header[0][4] > 0:
-        print "Trying to place particles in the star group, but that group's not empty!  Please do this file by hand.  Exiting."
-        sys.exit(1337)
-        
-    elif nstar == 0:
-        nstar = header[0][4]
-        starmass = header[1][4]
-        starpos = stardata[0]
-        starvel = stardata[1]
-        starID = stardata[2]
+    splitidx = int(tosplit[-1])
+    nsplit = ntot[splitidx]
+    masses = data[tosplit]['Masses']
+    umasses = np.unique(masses)
 
-    if gasmass:  print "There are {0} particles in the gas group with variable masses".format(header[0][0])
-    else:        print "There are {0} particles in the gas group with a mass of {1}".format(header[0][0],header[1][0])
-    print "There are {0} particles in the halo group with a mass of {1}".format(header[0][1],header[1][1])
-    print "Placed {0} particles in the disk group with a mass of {1}".format(ndisk,diskmass)
-    print "Placed {0} particles in the bulge group with a mass of {1}".format(nbulge,bulgemass)
-    print "Placed {0} particles in the star group with a mass of {1}".format(nstar,starmass)
-    print "Placed {0} particles in the bndry group with a mass of {1}".format(nbndry,bndrymass)
+    #ok, now to figure out where to put the particles....
+    def chunkIt(seq, num):
+        avg = len(seq) / float(num)
+        out = []
+        last = 0.0
 
-    ntot = ndisk+nbulge+nbndry+header[0][1]+header[0][0]+nstar
-    gas = header[0][0] > 0
+        while last < len(seq):
+            out.append(seq[int(last):int(last + avg)])
+            last += avg
+        lengths = np.array([len(kk) for kk in out])
+        if (np.diff(lengths) < 0).any():
+            for ii in range(len(out)-1):
+                if len(out[ii]) > len(out[ii+1]):
+                    temp1 = np.array(out[ii][:-1],copy=True)
+                    temp2 = np.hstack( ( out[ii][-1], out[ii+1] ) )
+                    out[ii] = temp1
+                    out[ii+1] = temp2
+        return out
 
-    assert ndisk+nbulge+nbndry+nstar == header[0][5]      #Check that all the particles that were in the bndry group originally made it somewhere
+    if len(umasses) < len(splitto):
+        outmasses = np.empty(len(splitto))
+        outmasses[:] = -1
+        outmasses[:len(umasses)] = umasses
+    else:
+        outmasses = chunkIt(np.sort(umasses),len(splitto))
 
-    #pack the header and write it:
-    
-    f = open(sys.argv[2],'wb')
+    print "\n###########"
+    print "Splitting {0} particles masses in {1} to ".format(umasses.size,tosplit)+', '.join(splitto)
+    nfile[int(tosplit[-1])] = 0     #clear the data in that group for now; will get filled back in below if necessary
+
+    splitdata = {}
+    datatosplit = data[tosplit]
+    loc = 0
+    for key in splitto:
+        mydict = {}
+        allii = int(key[-1])
+        msk = np.empty(nsplit,dtype=bool)
+        msk[:] = False
+        for m in outmasses[loc]:
+            msk = (msk)|(masses==m)
+        nfile[allii] = np.count_nonzero(msk)
+        if len(outmasses[loc]) == 1:
+            mtable[allii] = outmasses[loc]
+        else:
+            mydict['Masses'] = masses[msk]
+        mydict['Coordinates'] = datatosplit['Coordinates'][msk]
+        mydict['Velocities'] = datatosplit['Velocities'][msk]
+        mydict['ParticleIDs'] = datatosplit['ParticleIDs'][msk]
+        splitdata[key] = mydict
+        loc += 1
+
+    for ii in range(len(splitto)):
+        allii = int(splitto[ii][-1])
+        string = '{0} particles with masses '.format(nfile[allii])
+        for jj in range(len(outmasses[ii])):            
+            string += "{0:.3g}".format(outmasses[ii][jj])
+            if jj != len(outmasses[ii]) - 1:
+                string += ", "
+            else:
+                string += " "
+        string += "are going in "+splitto[ii]
+        print string
+
+    data[tosplit] = {'Coordinates':np.array([],dtype='float32'),'Velocities':np.array([],dtype='float32'),'ParticleIDs':np.array([],dtype='uint32')}  #clear out the data in the original group
+    assert nfile.sum() == ntot.sum()        #check that I still have all the particles -- nfile has been modified; ntot hasn't
+
+    print "###########\n"
+
+    #first figure out the new header
+    print "Opening "+outname+" to write"
+    f = open(outname,'wb')
     f.write(struct.pack('<I',256))
-    f.write(struct.pack('<6I',header[0][0],header[0][1],ndisk,nbulge,nstar,nbndry))    #Npart_file
-    f.write(struct.pack('<6d',header[1][0],header[1][1],diskmass,bulgemass,starmass,bndrymass)) #Mass table 
-    f.write(struct.pack('<d',header[2]))   #time
-    f.write(struct.pack('<d',header[3]))   #z
-    f.write(struct.pack('<i',header[4]))   #FlagSfr
-    f.write(struct.pack('<i',header[5]))   #FlagFeedback
-    f.write(struct.pack('<6i',header[6][0],header[6][1],ndisk,nbulge,nstar,nbndry)) #Npart_total
-    f.write(struct.pack('<i',header[7]))   #FlagCooling
-    f.write(struct.pack('<i',header[8]))   #NumFiles
-    f.write(struct.pack('<d',header[9]))   #BoxSize
-    f.write(struct.pack('<d',header[10]))  #Omega0
-    f.write(struct.pack('<d',header[11]))  #OmegaL
-    f.write(struct.pack('<d',header[12]))  #h
-    f.write(struct.pack('<i',header[13]))  #FlagAge
-    f.write(struct.pack('<i',header[14]))  #FlagMetals
-    f.write(struct.pack('<6i',header[15][0],header[15][1],header[15][2],header[15][3],header[15][4],header[15][5]))    #NallHW -- might have to modify this for large sims
-    f.write(struct.pack('<i',header[16]))  #flag_entr_ics
+    f.write(nfile.astype('uint32').tostring())
+    f.write(mtable.astype('float64').tostring())
+    f.write(struct.pack('<d',header['Time']))   #time
+    f.write(struct.pack('<d',header['Redshift']))   #z
+    f.write(struct.pack('<i',header['Flag_Sfr']))   #FlagSfr
+    f.write(struct.pack('<i',header['Flag_Feedback']))   #FlagFeedback
+    f.write(nfile.astype('int32').tostring())   #ntotal
+    f.write(struct.pack('<i',header['Flag_Cooling']))   #FlagCooling
+    f.write(struct.pack('<i',header['NumFilesPerSnapshot']))   #NumFiles
+    f.write(struct.pack('<d',header['BoxSize']))   #BoxSize
+    f.write(struct.pack('<d',header['Omega0']))  #Omega0
+    f.write(struct.pack('<d',header['OmegaLambda']))  #OmegaL
+    f.write(struct.pack('<d',header['HubbleParam']))  #h
+    f.write(struct.pack('<i',header['Flag_StellarAge']))  #FlagAge
+    f.write(struct.pack('<i',header['Flag_Metals']))  #FlagMetals
+    f.write(np.array(header['NumPart_Total_HW'],dtype='int32').tostring())    #NallHW -- might have to modify this for large sims
+    f.write(struct.pack('<i',header['Flag_Entropy_ICs']))  #flag_entr_ics
 
     header_bytes_left = 260 - f.tell()
     for i in range(header_bytes_left):
         f.write(struct.pack('<x'))    #Fill out the rest of the header with pad bytes
     assert f.tell() == 260
     f.write(struct.pack('<I',256))
-    
-    #Now pack the data using tostring, but I have to check that the dtypes of all my arrays are right
-    gasdata[0] = gasdata[0].astype('f')
-    gasdata[1] = gasdata[1].astype('f')
-    gasdata[2] = gasdata[2].astype('I')
-    if gas:
-        gasdata[3] = gasdata[3].astype('f')      #If gasmass, this is the mass block, otherwise, it's the internal energy
-        if gasmass:
-            gasdata[4] = gasdata[4].astype('f')  #This is the internal energy if it exists, but it only exists if gasmass is true
-    
-    halodata[0] = halodata[0].astype('f')
-    halodata[1] = halodata[1].astype('f')
-    halodata[2] = halodata[2].astype('I')
-    try:
-        halodata[3] = halodata[3].astype('f')
-    except IndexError:
-        print "There is no mass block for the halo group, as expected."
 
-    bndrypos = bndrypos.astype('f')
-    bndryvel = bndryvel.astype('f')
-    bndryID = bndryID.astype('I')
-    
-    bulgepos = bulgepos.astype('f')
-    bulgevel = bulgevel.astype('f')
-    bulgeID = bulgeID.astype('I')
-    
-    diskpos = diskpos.astype('f')
-    diskvel = diskvel.astype('f')
-    diskID = diskID.astype('I')
-    
-    starpos = starpos.astype('f')
-    starvel = starvel.astype('f')
-    starID = starID.astype('I')
-    try:
-        stardata[3] = stardata[3].astype('f')
-    except IndexError:
-        print "There is no mass block for star particles, as expected."
-        
-    #Now I have to write it all to the file
-    print "Writing coordinates."
-    f.write(struct.pack('<I',12*ntot))
-    f.write(gasdata[0].tostring())
-    f.write(halodata[0].tostring())
-    f.write(diskpos.tostring())
-    f.write(bulgepos.tostring())
-    f.write(starpos.tostring())
-    f.write(bndrypos.tostring())
-    f.write(struct.pack('<I',12*ntot))
-    
-    
-    print "Writing velocities."
-    f.write(struct.pack('<I',12*ntot))
-    f.write(gasdata[1].tostring())
-    f.write(halodata[1].tostring())
-    f.write(diskvel.tostring())
-    f.write(bulgevel.tostring())
-    f.write(starvel.tostring())
-    f.write(bndryvel.tostring())
-    f.write(struct.pack('<I',12*ntot))
-    
-    
-    print "Writing particles IDs."
-    f.write(struct.pack('<I',4*ntot))
-    f.write(gasdata[2].tostring())
-    f.write(halodata[2].tostring())
-    f.write(diskID.tostring())
-    f.write(bulgeID.tostring())
-    f.write(starID.tostring())
-    f.write(bndryID.tostring())
-    f.write(struct.pack('<I',4*ntot))
-    
-    nmass = 0
-    if len(stardata) > 3:
-        nmass = nmass + len(stardata[3])
-    if len(halodata) > 3:
-        nmass = nmass + len(halodata[3])
-    if gasmass:
-        nmass = nmass + len(gasdata[3])
-    
-    if gasmass or (header[1][1] == 0 and header[0][1] > 0) or (header[1][4] == 0 and header[0][4] > 0):
-        #Then I have to do masses too
-        f.write(struct.pack('<I',4*nmass))
-        if gasmass:
-            print "Writing variable masses for gas particles."
-            f.write(gasdata[3].tostring())
-        if len(halodata) > 3:
-            print "Writing variable masses for halo particles."
-            f.write(halodata[3].tostring())
-        if len(stardata) > 3:
-            print "Writing variable masses for star particles."
-            f.write(stardata[3].tostring())
-        f.write(struct.pack('<I',4*nmass))
+    #now pack and write the data
+    vec_size = np.array([12*nfile.sum()],dtype='uint32').tostring()
+    f.write(vec_size)
+    f.write(data['PartType0']['Coordinates'].astype('float32').tostring())
+    print "Wrote {0} coordinates for PartType0".format(data['PartType0']['Coordinates'].shape[0])
+    f.write(data['PartType1']['Coordinates'].astype('float32').tostring())
+    print "Wrote {0} coordinates for PartType1".format(data['PartType1']['Coordinates'].shape[0])
+    for k in splitto:
+        if k == 'PartType5':    continue    #do this after stars
+        f.write(splitdata[k]['Coordinates'].astype('float32').tostring())
+        print "Wrote {0} coordinates for {1}".format(splitdata[k]['Coordinates'].shape[0],k)
+    f.write(data['PartType4']['Coordinates'].astype('float32').tostring())
+    print "Wrote {0} coordinates for PartType4".format(data['PartType4']['Coordinates'].shape[0])
+    if ops.usebh:
+        f.write(splitdata['PartType5']['Coordinates'].astype('float32').tostring())
+        print "Wrote {0} coordinates for PartType5".format(splitdata['PartType5']['Coordinates'].shape[0])
     else:
-        print "There are no particles with variable masses being written."
-    
-    
-    if gas:
-        print "Writing gas internal energy."
-        #Then I have to do gas specific stuff
-        f.write(struct.pack('<I',4*len(gasdata[0])))
-        if gasmass:   f.write(gasdata[4].tostring())
-        else:         f.write(gasdata[3].tostring())
-        f.write(struct.pack('<I',4*len(gasdata[0])))
-    
+        f.write(data['PartType5']['Coordinates'].astype('float32').tostring())
+        print "Wrote {0} coordinates for PartType5".format(data['PartType5']['Coordinates'].shape[0])
+    f.write(vec_size)
+
+
+    f.write(vec_size)
+    f.write(data['PartType0']['Velocities'].astype('float32').tostring())
+    f.write(data['PartType1']['Velocities'].astype('float32').tostring())
+    for k in splitto:
+        if k == 'PartType5':    continue    #do this after stars
+        f.write(splitdata[k]['Velocities'].astype('float32').tostring())
+    f.write(data['PartType4']['Velocities'].astype('float32').tostring())
+    if ops.usebh:
+        f.write(splitdata['PartType5']['Velocities'].astype('float32').tostring())
+    else:
+        f.write(data['PartType5']['Velocities'].astype('float32').tostring())
+    f.write(vec_size)
+
+    scalar_size = np.array([4*nfile.sum()],dtype='uint32').tostring()
+    f.write(scalar_size)
+    f.write(data['PartType0']['ParticleIDs'].astype('uint32').tostring())
+    f.write(data['PartType1']['ParticleIDs'].astype('uint32').tostring())
+    for k in splitto:
+        if k == 'PartType5':    continue    #do this after stars
+        f.write(splitdata[k]['ParticleIDs'].astype('uint32').tostring())
+    f.write(data['PartType4']['ParticleIDs'].astype('uint32').tostring())
+    if ops.usebh:
+        f.write(splitdata['PartType5']['ParticleIDs'].astype('uint32').tostring())
+    else:
+        f.write(data['PartType5']['ParticleIDs'].astype('uint32').tostring())
+    f.write(scalar_size)
+
+    nmass = 0
+    for ii in [0,1,4]:
+        if 'Masses' in data['PartType'+str(ii)].keys():
+            nmass += nfile[ii]
+    for key in splitdata.keys():
+        if 'Masses' in splitdata[key].keys():
+            nmass += splitdata[key]['Masses'].size
+    if not ops.usebh:
+        if 'Masses' in data['PartType5'].keys():
+            nmass += nfile[5]
+
+    mass_size = np.array([4*nmass],dtype='uint32').tostring()
+    f.write(mass_size)
+    if 'Masses' in data['PartType0'].keys():
+        print "Writing varaible masses for PartType0"
+        f.write(data['PartType0']['Masses'].astype('float32').tostring())
+    if 'Masses' in data['PartType1'].keys():
+        print "Writing varaible masses for PartType1"
+        f.write(data['PartType1']['Masses'].astype('float32').tostring())
+    for key in splitto:
+        if key == 'PartType5':  continue
+        if 'Masses' in splitdata[key].keys():
+            print "Writing varaible masses for "+key
+            f.write(splitdata[key]['Masses'].astype('float32').tostring())
+    if 'Masses' in data['PartType4'].keys():
+        print "Writing varaible masses for PartType4"
+        f.write(data['PartType4']['Masses'].astype('float32').tostring())
+    if ops.usebh:
+        if 'Masses' in splitdata['PartType5'].keys():
+            print "Writing variable masses for PartType5"
+            f.write(splitdata['PartType5']['Masses'].astype('float32').tostring())
+    else:
+        if 'Masses' in data['PartType5'].keys():
+            print "Writing variable masses for PartType5"
+            f.write(data['PartType5']['Masses'].astype('float32').tostring())
+    f.write(mass_size)
+
+    if nfile[0] > 0:
+        print "Writing gas internal energy"
+        gas_size = np.array([nfile[0]],dtype='uint32').tostring()
+        f.write(gas_size)
+        f.write(data['PartType0']['InternalEnergy'].astype('float32').tostring())
+        f.write(gas_size)
+
     f.close()
-    
-    print "Wrote "+sys.argv[2]
-
-
-
-
-
-
+    print "Wrote "+outname
