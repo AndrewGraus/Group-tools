@@ -91,7 +91,7 @@ def Load_Halo_Data(giz_halo_file,h=0.702):
 
     return {'ids':id_rock, 'masses':M_rock, 'rvir':Rvir_rock, 'rmax':Rmax_rock, 'vmax':Vmax_rock, 'centers':centers_rock,'velocities':velocity_rock}
 
-def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print_hi_res_halos=False,subhalo_limit=10*10.0):
+def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print_hi_res_halos=False,subhalo_limit=10**10.0):
     import numpy as np
     import yt, h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -107,8 +107,10 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
     #There's nothing wrong with it, but I want to have it return more values without
     #having to add in a bunch of additional options
 
+    print 'loading data'
+
     halo_dict = Load_Halo_Data(halo_file) #load in the rockstar file
-    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True) #load in the particle data
+    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True) #load in the particle data'
 
     id_rock = halo_dict['ids'] 
     M_rock = halo_dict['masses']
@@ -134,6 +136,8 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
     M_hi_res = 0.0
     total_hi_res = []
     closest_low_res_list = []
+
+    print 'looping over '+str(len(mass_rock_select))+' halos.'
 
     for j in range(len(mass_rock_select)):
         center = center_rock_select[j]
@@ -355,7 +359,7 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False,halo_id=None):
     
     #theres this annoying thing where the age is a float so .value doesn't work in older versions of astropy
 
-    star_age_gal_T = [cosmo.age(1.0/xx - 1.0) for xx in galaxy_star_part_ages] #converts scale factor to time given cosmology
+    star_age_gal_T = [cosmo.age(1.0/xx - 1.0).value for xx in galaxy_star_part_ages] #converts scale factor to time given cosmology
 
     #star_age_gal_T = [cosmo.age(1.0/xx - 1.0).value for xx in galaxy_star_part_ages] #converts scale factor to time given cosmology
 
