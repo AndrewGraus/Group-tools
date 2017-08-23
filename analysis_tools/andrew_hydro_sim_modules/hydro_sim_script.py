@@ -30,11 +30,11 @@ print 'analysis for halo {} \n'.format(halo_num)
 
 #First thing is to print the statistics for the host
 
-andrew_hydro_sim_modules.hydro_sim_analysis.Identify_Host(particle_file, halo_file, print_values=True)
+#andrew_hydro_sim_modules.hydro_sim_analysis.Identify_Host(particle_file, halo_file, print_values=True)
 
 #print galaxy statistics
 
-star_age_T, star_FeH = andrew_hydro_sim_modules.hydro_sim_analysis.galaxy_statistics(particle_file, halo_file, print_values=True)
+star_age_T, star_FeH, star_parts_mass, gas_mass = andrew_hydro_sim_modules.hydro_sim_analysis.galaxy_statistics(particle_file, halo_file)
 
 np.savetxt(plot_dir+'/'+str(halo_num)+'_star_ages.txt',np.asarray(star_age_T))
 np.savetxt(plot_dir+'/'+str(halo_num)+'_star_FeH.txt',np.asarray(star_FeH)) 
@@ -45,7 +45,7 @@ agebins = np.linspace(0.0,14.0,100)
 m_weight = np.ones_like(star_FeH)/float(len(star_FeH))
 Z_bins = np.linspace(-6.0,0.5,60)
 Z_bins_plot = [(Z_bins[xx]+Z_bins[xx])/2.0 for xx in range(len(Z_bins)-1)]
-
+'''
 plt.figure(1,(10,10))
 mpl.rcParams['axes.linewidth']=3
 plt.yticks(fontsize = 25)
@@ -65,5 +65,5 @@ plt.xlabel('[Fe/H]',fontsize=25)
 plt.ylabel('df/d[Fe/H]',fontsize=25)
 plt.hist(star_FeH,bins=Z_bins,color='b',weights=m_weight,alpha=0.5,histtype='step',linewidth=3)
 plt.savefig(plot_dir+'/'+str(halo_num)+'_galaxy_MDF.png')
-
+'''
 andrew_hydro_sim_modules.hydro_sim_analysis.report_velocities(particle_file,halo_file,add_dm=False,add_gas=False,add_stars=True,add_low_res=False)

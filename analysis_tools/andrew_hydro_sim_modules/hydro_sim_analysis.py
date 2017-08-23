@@ -168,7 +168,7 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
         print 'id_gal: '+str(id_hi_res)
         print 'mass: '+'{0:.2e} Msun'.format(M_hi_res)
         print 'radius: '+'{0:.2e} kpc'.format(rvir_hi_res)
-        print 'closest low res particle: {0:d} Rvir '.format(int(closest_low_res))
+        print 'closest low res particle: {0:.2e} Rvir '.format(closest_low_res)
 
     #return 'hosts' center and Rvir
 
@@ -259,7 +259,7 @@ def Identify_Host_and_Subhalos(giz_hdf5,halo_file,print_values=True,subhalo_limi
         print 'id_gal: '+str(id_hi_res)
         print 'mass: '+'{0:.2e} Msun'.format(M_hi_res)
         print 'radius: '+'{0:.2e} kpc'.format(rvir_hi_res)
-        print 'closest low res particle: {0:d} Rvir '.format(int(closest_low_res))
+        print 'closest low res particle: {0:.2e} Rvir '.format(int(closest_low_res))
 
     sub_distances = [np.sqrt((hi_res_X[xx]-center_hi_res[0])**2.0+(hi_res_Y[xx]-center_hi_res[1])**2.0+(hi_res_Z[xx]-center_hi_res[2])**2.0) for xx in range(len(hi_res_X))]
     
@@ -326,6 +326,8 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False,halo_id=None):
         host_center, host_rvir = Identify_Host(giz_hdf5,halo_file)
     else:
         host_center, host_rvir, host_vel = return_specific_halo(halo_file,int(halo_id))
+    
+    print 'loading pd'
 
     PD_dict = Load_Particle_Data(giz_hdf5,add_dm=False,add_gas=True,add_stars=True)
 
