@@ -38,11 +38,11 @@ def Load_Particle_Data(giz_hdf5,add_dm=True,add_gas=False,add_stars=False,add_lo
         gas_vels = f['PartType0']['Velocities'][:]
         gas_metal = f['PartType0']['Metallicity'][:]
         gas_IE = f['PartType0']['InternalEnergy'][:]
-        gas_EA = f['PatrType0']['ElectronAbundance'][:]
+        gas_EA = f['PartType0']['ElectronAbundance'][:]
         gas_He= gas_metal[:,1] #number fraction
         gas_y_He = gas_He / (4.0 * (1.0 - gas_He))
         Molecular_weights = (1.0 + 4.0*gas_y_He)/(1.0+gas_y_He+gas_EA)*const.m_p
-        T_gas = (1000.0)**2.0*(5.0/3.0-1.0)*Molecular_weights / const.k_B #This should give temp in K Unless I screwed something up (I probably screwed something up)
+        T_gas = (1000.0)**2.0*(5.0/3.0-1.0)*Molecular_weights*gas_IE / const.k_B #This should give temp in K Unless I screwed something up (I probably screwed something up)
 
         PD_dict['gas'] = {'coords':gas_part_coords,'masses':gas_part_masses,
                           'velocities':gas_vels,'temperature':T_gas}
@@ -352,6 +352,7 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False,halo_id=None):
 
     gas_coords = PD_dict['gas']['coords']
     gas_masses = PD_dict['gas']['masses']
+    gas_temps = PD_dict['gas']['temperature']
 
     star_dists = get_distance(star_coords,host_center)
     gas_dists = get_distance(gas_coords,host_center)
@@ -362,15 +363,16 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False,halo_id=None):
     star_dist_mask_rvir = (star_dists<=host_rvir)
     gas_dist_mask_rvir = (gas_dists<=host_rvir)
 
+    cold_gas_mask = (gas_dists<=host_rvir)&(gas_temps<=1.0e4)
+
     galaxy_star_parts_mass = star_masses[star_dist_mask]
     galaxy_star_part_ages = star_age[star_dist_mask]
     galaxy_star_part_FeH = star_Fe_H[star_dist_mask]
     galaxy_gas_mass = gas_masses[gas_dist_mask]
+    cold_gas_mass = gas_masses[cold_gas_mask]
 
     gas_mass_rvir = gas_masses[gas_dist_mask_rvir]
     star_mass_rvir = star_masses[star_dist_mask_rvir]
-
-    
     
     if print_values==True:
         print '{:#^30} \n'.format('This returns a list of ages and FeH for stars in Rvir')
@@ -380,6 +382,8 @@ def galaxy_statistics(giz_hdf5,halo_file,print_values=False,halo_id=None):
 
         print 'Galaxy stellar mass (in Rvir) is: {0:.2e}'.format(sum(star_mass_rvir))
         print 'Galaxy gas mass (in Rvir) is: {0:.2e}'.format(sum(gas_mass_rvir))
+
+        print 'Cold gas mass (in Rvir) is: {0:.2e}'.format(sum(cold_gas_mass))
 
     agebins = np.linspace(0.0,14.0,100)
     cosmo = FlatLambdaCDM(H0=70.2,Om0=0.266) #THIS SHOULDN'T BE HARD CODED
