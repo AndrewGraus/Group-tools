@@ -41,8 +41,8 @@ def Load_Particle_Data(giz_hdf5,add_dm=True,add_gas=False,add_stars=False,add_lo
         gas_EA = f['PartType0']['ElectronAbundance'][:]
         gas_He= gas_metal[:,1] #number fraction
         gas_y_He = gas_He / (4.0 * (1.0 - gas_He))
-        Molecular_weights = (1.0 + 4.0*gas_y_He)/(1.0+gas_y_He+gas_EA)*const.m_p
-        T_gas = (1000.0)**2.0*(5.0/3.0-1.0)*Molecular_weights*gas_IE / const.k_B #This should give temp in K Unless I screwed something up (I probably screwed something up)
+        Molecular_weights = (1.0 + 4.0*gas_y_He)/(1.0+gas_y_He+gas_EA)*const.m_p.value
+        T_gas = (1000.0)**2.0*(5.0/3.0-1.0)*Molecular_weights*gas_IE / const.k_B.value #This should give temp in K Unless I screwed something up (I probably screwed something up)
 
         PD_dict['gas'] = {'coords':gas_part_coords,'masses':gas_part_masses,
                           'velocities':gas_vels,'temperature':T_gas}
