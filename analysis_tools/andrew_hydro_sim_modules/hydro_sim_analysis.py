@@ -290,6 +290,95 @@ def Identify_Host_and_Subhalos(giz_hdf5,halo_file,print_values=True,subhalo_limi
 
     return halos_matrix
 
+def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particles=False,halo_lim=1.0e9):
+    #The idea behind this module is to take the particles from the file
+    #and identify the hi res halos up to some tolerance, which is by
+    #default 100% of the particles have to be hi_res
+    #
+    #Then save the halos and their properties to a dictionary
+    #
+    #Eventually I will also add in the capability to save all the 
+    #particles in each halo, and then maybe the positions of the
+    #closest low res particles if there are mutliple within Rvir
+    
+    #The first thing I'm going to do is identify every subahlo that is above the limit
+
+    halo_dict = Load_Halo_Data(halo_file)
+    PD_dict = Load_Particle_data(giz_hdf5,add_low_res=True)
+
+    id_rock = halo_dict['ids'] 
+    M_rock = halo_dict['masses']
+    Vmax_rock = halo_dict['vmax']
+    Rvir_rock = halo_dict['rvir']
+    Rmax_rock = halo_dict['rmax']
+    centers_rock = halo_dict['centers']
+    velocities_rock = halo_dict['velocities']
+
+    mass_selection = (M_rock>halo_lim)
+    
+    id_rock_select = id_rock[mass_select]
+    mass_rock_select = M_rock[mass_select]
+    vmax_rock_select = Vmax_rock[mass_select]
+    rvir_rock_select = Rvir_rock[mass_select]
+    rmax_rock_select = Rmax_rock[mass_select]
+    center_rock_select = centers_rock[mass_select]
+    velocities_rock_select = velocities_rock[mass_select]
+    
+    particle_coords = PD_dict['halo']['coords']
+    particle_mass = PD_dict['halo']['masses'][0]
+    low_res_coords = PD_dict['disk']['coords']
+    low_res_mass = PD_dict['disk']['masses'][0]
+
+    #Now I want to find the distance between every halo and every particle
+    #I can do this "easily" by using masked arrays
+    #
+    #The first step is to create a 3d array I can do this by taking a
+    #2d array of the halo centers and doing center_rock_select[:,np.newaxis]
+    #which makes a 3d array where each array of axis=0 is the halo center
+    
+    halo_particle_diff = center_rock_select[:,np.newaxis] - low_res_coords
+    halo_hi_res_diff = center_rock_select[:,np.newaxis] - particle_coords
+
+    #now I need to calculate the distance which can be accomplished by
+    #linalg.norm along the 2nd axis which is the "row" of each
+    #element in the 3d array
+
+    low_res_dist_all = np.linalg.norm(halo_particle_diff,axis=2)
+    hi_res_dist_all = np.linalg.norm(halo_hi_res_diff,axis=2)
+
+    #now I want to do two things, calculate the lowest distance in each 
+    #row of this array, and also mask this and calculate the total number
+    #of particles in Rvir
+    #
+    #maybe just mask it and do the fraction calculation in a loop?
+
+    Rvir_masks = np.broadcast_to(rvir_rock_select.T,(len(rvir_rock_select),len(low_res_coords)))
+    
+    low_res_mask = (low_res_dist_all<Rvir_masks)
+    low_res_masked_distances = np.ma.array(low_res_dist_all,mask=np.logical_not(low_res_mask))
+
+    hi_res_mask = (low_res_dist_all<Rvir_masks)
+    hi_res_masked_distances = np.ma.array(hi_res_dist_all,mask=np.logical_not(hi_res_mask))
+
+    #I can sum across each row to get the total mass
+    #I can also maybe do np.min along each row to get the closest thing
+
+    low_res_n_in_rvir = np.sum(low_res_mask,axis=0)
+    hi_res_n_in_rvir = np.sum(hi_res_mask,axis=0)
+
+    assert len(low_res_n_in_rvir)==len(id_rock_select)
+
+    low_res_mass_in_rvir = low_res_n_in_rvir*low_res_mass
+    hi_res_mass_in_rvir = hi_res_n_in_rvir*particle_mass
+
+    hi_res_fraction = np.divide(low_res_mass_in_rvir,np.sum(hi_res_mass_in_rvir,low_res_mass_in_rvir))
+
+    assert len(hi_res_fraction)==len(id_rock_select)
+
+    hi_res_frac_mask = (hi_res_fraction>=Low_res_tolerance)
+
+    print len(id_rock_select[hi_res_frac_mask])
+
 def return_specific_halo(halo_file,halo_id):
     #given a rockstar halo file and an id 
     #it will return that halo's center, virial radius, and velocity
