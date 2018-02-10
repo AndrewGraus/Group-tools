@@ -306,7 +306,7 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     import numpy as np
 
     halo_dict = Load_Halo_Data(halo_file)
-    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True)
+    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True,add_stars=True,add_gas=True)
 
     id_rock = halo_dict['ids'] 
     M_rock = halo_dict['masses']
@@ -325,11 +325,19 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     rmax_rock_select = Rmax_rock[mass_select]
     center_rock_select = centers_rock[mass_select]
     velocities_rock_select = velocities_rock[mass_select]
+
+    rgal_select = rvir_rock_select*0.1 #galaxy radius defined as just 10% Rvir
     
     particle_coords = PD_dict['halo']['coords']
     particle_mass = PD_dict['halo']['masses'][0]
     low_res_coords = PD_dict['disk']['coords']
     low_res_mass = PD_dict['disk']['masses'][0]
+
+    star_coords = PD_dict['star']['coords']
+    star_mass = PD_dict['star']['masses']
+
+    gas_coords = PD_dict['gas']['coords']
+    gas_mass = PD_dict['gas']['masses']
 
     #Now I want to find the distance between every halo and every particle
     #I can do this "easily" by using masked arrays
@@ -340,6 +348,13 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     
     halo_particle_diff = center_rock_select[:,np.newaxis] - low_res_coords
     halo_hi_res_diff = center_rock_select[:,np.newaxis] - particle_coords
+    star_diff = center_rock_select[:,np.newaxis] - star_coords
+    gas_diff = center_rock_select[:,np.newaxis] - gas_coords
+
+    #star and gas multiples
+    star_mass_multiple = np.repeat(star_mass[np.newaxis,:],len(id_rock_select),axis=0)
+    
+    gas_mass_multiple = np.repeat(gas_mass[np.newaxis,:],len(id_rock_select),axis=0)
 
     #now I need to calculate the distance which can be accomplished by
     #linalg.norm along the 2nd axis which is the "row" of each
@@ -347,6 +362,8 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
 
     low_res_dist_all = np.linalg.norm(halo_particle_diff,axis=2)
     hi_res_dist_all = np.linalg.norm(halo_hi_res_diff,axis=2)
+    star_dist_all = np.linalg.norm(star_diff,axis=2)
+    gas_dist_all = np.linalg.norm(gas_diff,axis=2)
 
     #now I want to do two things, calculate the lowest distance in each 
     #row of this array, and also mask this and calculate the total number
@@ -355,15 +372,41 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     #maybe just mask it and do the fraction calculation in a loop?
 
     Rvir_masks = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(low_res_coords)))
-
     Rvir_masks_hi_res = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(particle_coords)))
-    
-    
+    Rvir_masks_star = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(star_coords)))
+    Rvir_masks_gas = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(gas_coords)))
+
+    Rgal_masks_star = np.broadcast_to(rgal_select[np.newaxis].T,(len(rgal_select),len(star_coords)))
+    Rgal_masks_gas = np.broadcast_to(rgal_select[np.newaxis].T,(len(rgal_select),len(gas_coords)))
+
     low_res_mask = (low_res_dist_all<Rvir_masks)
     low_res_masked_distances = np.ma.array(low_res_dist_all,mask=np.logical_not(low_res_mask))
 
     hi_res_mask = (hi_res_dist_all<Rvir_masks_hi_res)
     hi_res_masked_distances = np.ma.array(hi_res_dist_all,mask=np.logical_not(hi_res_mask))
+
+    star_mask = (star_dist_all<Rvir_masks_star)
+    star_mask_gal = (star_dist_all<Rgal_masks_star)
+
+    star_masked_distances = np.ma.array(star_dist_all,mask=np.logical_not(star_mask))
+    star_masked_distances_gal = np.ma.array(star_dist_all,mask=np.logical_not(star_mask_gal))
+
+    print star_mask.shape
+    print star_mask_gal.shape
+
+    print star_mass_multiple.shape
+
+    star_masked_masses = np.ma.array(star_mass_multiple,mask=np.logical_not(star_mask))
+    star_masked_masses_gal = np.ma.array(star_mass_multiple,mask=np.logical_not(star_mask_gal))
+
+    gas_mask = (gas_dist_all<Rvir_masks_gas)
+    gas_mask_gal = (gas_dist_all<Rgal_masks_gas)
+
+    gas_masked_distances = np.ma.array(gas_dist_all,mask=np.logical_not(gas_mask))
+    gas_masked_distances_gal = np.ma.array(gas_dist_all,mask=np.logical_not(gas_mask_gal))
+
+    gas_masked_masses = np.ma.array(gas_mass_multiple,mask=np.logical_not(gas_mask))
+    gas_masked_masses_gal = np.ma.array(gas_mass_multiple,mask=np.logical_not(gas_mask_gal))
 
     #I can sum across each row to get the total mass
     #I can also maybe do np.min along each row to get the closest thing
@@ -376,6 +419,12 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     low_res_mass_in_rvir = low_res_n_in_rvir*low_res_mass
     hi_res_mass_in_rvir = hi_res_n_in_rvir*particle_mass
 
+    star_mass_in_rvir = np.sum(star_masked_masses,axis=1)
+    star_mass_in_rgal = np.sum(star_masked_masses_gal,axis=1)
+
+    gas_mass_in_rvir = np.sum(gas_masked_masses,axis=1)
+    gas_mass_in_rgal = np.sum(gas_masked_masses_gal,axis=1)    
+
     hi_res_fraction = np.divide(hi_res_mass_in_rvir,np.add(hi_res_mass_in_rvir,low_res_mass_in_rvir))
 
     assert len(hi_res_fraction)==len(id_rock_select)
@@ -383,8 +432,15 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     hi_res_frac_mask = (hi_res_fraction>=Low_res_tolerance)
 
     print len(id_rock_select[hi_res_frac_mask])
-
+    
+    print 'fraction of hi res particles:'
     print hi_res_fraction
+
+    print 'galaxy stellar masses:'
+    print star_mass_in_rgal
+
+    print 'galaxy gas masses:'
+    print gas_mass_in_rgal
 
 def return_specific_halo(halo_file,halo_id):
     #given a rockstar halo file and an id 
