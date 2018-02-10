@@ -303,8 +303,10 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     
     #The first thing I'm going to do is identify every subahlo that is above the limit
 
+    import numpy as np
+
     halo_dict = Load_Halo_Data(halo_file)
-    PD_dict = Load_Particle_data(giz_hdf5,add_low_res=True)
+    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True)
 
     id_rock = halo_dict['ids'] 
     M_rock = halo_dict['masses']
@@ -314,7 +316,7 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     centers_rock = halo_dict['centers']
     velocities_rock = halo_dict['velocities']
 
-    mass_selection = (M_rock>halo_lim)
+    mass_select = (M_rock>halo_lim)
     
     id_rock_select = id_rock[mass_select]
     mass_rock_select = M_rock[mass_select]
@@ -352,32 +354,37 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     #
     #maybe just mask it and do the fraction calculation in a loop?
 
-    Rvir_masks = np.broadcast_to(rvir_rock_select.T,(len(rvir_rock_select),len(low_res_coords)))
+    Rvir_masks = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(low_res_coords)))
+
+    Rvir_masks_hi_res = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(particle_coords)))
+    
     
     low_res_mask = (low_res_dist_all<Rvir_masks)
     low_res_masked_distances = np.ma.array(low_res_dist_all,mask=np.logical_not(low_res_mask))
 
-    hi_res_mask = (low_res_dist_all<Rvir_masks)
+    hi_res_mask = (hi_res_dist_all<Rvir_masks_hi_res)
     hi_res_masked_distances = np.ma.array(hi_res_dist_all,mask=np.logical_not(hi_res_mask))
 
     #I can sum across each row to get the total mass
     #I can also maybe do np.min along each row to get the closest thing
 
-    low_res_n_in_rvir = np.sum(low_res_mask,axis=0)
-    hi_res_n_in_rvir = np.sum(hi_res_mask,axis=0)
+    low_res_n_in_rvir = np.sum(low_res_mask,axis=1)
+    hi_res_n_in_rvir = np.sum(hi_res_mask,axis=1)
 
     assert len(low_res_n_in_rvir)==len(id_rock_select)
 
     low_res_mass_in_rvir = low_res_n_in_rvir*low_res_mass
     hi_res_mass_in_rvir = hi_res_n_in_rvir*particle_mass
 
-    hi_res_fraction = np.divide(low_res_mass_in_rvir,np.sum(hi_res_mass_in_rvir,low_res_mass_in_rvir))
+    hi_res_fraction = np.divide(hi_res_mass_in_rvir,np.add(hi_res_mass_in_rvir,low_res_mass_in_rvir))
 
     assert len(hi_res_fraction)==len(id_rock_select)
 
     hi_res_frac_mask = (hi_res_fraction>=Low_res_tolerance)
 
     print len(id_rock_select[hi_res_frac_mask])
+
+    print hi_res_fraction
 
 def return_specific_halo(halo_file,halo_id):
     #given a rockstar halo file and an id 
