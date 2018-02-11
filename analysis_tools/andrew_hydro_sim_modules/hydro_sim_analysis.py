@@ -326,10 +326,10 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     center_rock_select = centers_rock[mass_select]
     velocities_rock_select = velocities_rock[mass_select]
 
-    rgal_select = rvir_rock_select*0.1 #galaxy radius defined as just 10% Rvir
+    rgal_rock_select = rvir_rock_select*0.1 #galaxy radius defined as just 10% Rvir
     
-    particle_coords = PD_dict['halo']['coords']
-    particle_mass = PD_dict['halo']['masses'][0]
+    hi_res_coords = PD_dict['halo']['coords']
+    hi_res_mass = PD_dict['halo']['masses'][0]
     low_res_coords = PD_dict['disk']['coords']
     low_res_mass = PD_dict['disk']['masses'][0]
 
@@ -338,6 +338,7 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
 
     gas_coords = PD_dict['gas']['coords']
     gas_mass = PD_dict['gas']['masses']
+    gas_temp = PD_dict['gas']['temperature']
 
     #Now I want to find the distance between every halo and every particle
     #I can do this "easily" by using masked arrays
@@ -347,7 +348,7 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     #which makes a 3d array where each array of axis=0 is the halo center
     
     halo_particle_diff = center_rock_select[:,np.newaxis] - low_res_coords
-    halo_hi_res_diff = center_rock_select[:,np.newaxis] - particle_coords
+    halo_hi_res_diff = center_rock_select[:,np.newaxis] - hi_res_coords
     star_diff = center_rock_select[:,np.newaxis] - star_coords
     gas_diff = center_rock_select[:,np.newaxis] - gas_coords
 
@@ -371,59 +372,43 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     #
     #maybe just mask it and do the fraction calculation in a loop?
 
-    Rvir_masks = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(low_res_coords)))
-    Rvir_masks_hi_res = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(particle_coords)))
-    Rvir_masks_star = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(star_coords)))
-    Rvir_masks_gas = np.broadcast_to(rvir_rock_select[np.newaxis].T,(len(rvir_rock_select),len(gas_coords)))
+    #low_res_mask = (low_res_dist_all<rvir_rock_select[np.newaxis].T)
+    low_res_masked_distances = np.ma.array(low_res_dist_all,mask=np.logical_not((low_res_dist_all<rvir_rock_select[np.newaxis].T)))
+    hi_res_masked_distances = np.ma.array(hi_res_dist_all,mask=np.logical_not((hi_res_dist_all<rvir_rock_select[np.newaxis].T)))
+    star_masked_distances = np.ma.array(star_dist_all,mask=np.logical_not((star_dist_all<rvir_rock_select[np.newaxis].T)))
+    star_masked_distances_gal = np.ma.array(star_dist_all,mask=np.logical_not((star_dist_all<rgal_rock_select[np.newaxis].T)))
+    star_masked_masses = np.ma.array(star_mass_multiple,mask=np.logical_not((star_dist_all<rvir_rock_select[np.newaxis].T)))
+    star_masked_masses_gal = np.ma.array(star_mass_multiple,mask=np.logical_not((star_dist_all<rgal_rock_select[np.newaxis].T)))
+    gas_masked_distances = np.ma.array(gas_dist_all,mask=np.logical_not((gas_dist_all<rvir_rock_select[np.newaxis].T)))
+    gas_masked_distances_gal = np.ma.array(gas_dist_all,mask=np.logical_not((gas_dist_all<rgal_rock_select[np.newaxis].T)))
+    gas_masked_masses = np.ma.array(gas_mass_multiple,mask=np.logical_not((gas_dist_all<rvir_rock_select[np.newaxis].T)))
+    gas_masked_masses_gal = np.ma.array(gas_mass_multiple,mask=np.logical_not((gas_dist_all<rgal_rock_select[np.newaxis].T)))
 
-    Rgal_masks_star = np.broadcast_to(rgal_select[np.newaxis].T,(len(rgal_select),len(star_coords)))
-    Rgal_masks_gas = np.broadcast_to(rgal_select[np.newaxis].T,(len(rgal_select),len(gas_coords)))
-
-    low_res_mask = (low_res_dist_all<Rvir_masks)
-    low_res_masked_distances = np.ma.array(low_res_dist_all,mask=np.logical_not(low_res_mask))
-
-    hi_res_mask = (hi_res_dist_all<Rvir_masks_hi_res)
-    hi_res_masked_distances = np.ma.array(hi_res_dist_all,mask=np.logical_not(hi_res_mask))
-
-    star_mask = (star_dist_all<Rvir_masks_star)
-    star_mask_gal = (star_dist_all<Rgal_masks_star)
-
-    star_masked_distances = np.ma.array(star_dist_all,mask=np.logical_not(star_mask))
-    star_masked_distances_gal = np.ma.array(star_dist_all,mask=np.logical_not(star_mask_gal))
-
-    print star_mask.shape
-    print star_mask_gal.shape
-
-    print star_mass_multiple.shape
-
-    star_masked_masses = np.ma.array(star_mass_multiple,mask=np.logical_not(star_mask))
-    star_masked_masses_gal = np.ma.array(star_mass_multiple,mask=np.logical_not(star_mask_gal))
-
-    gas_mask = (gas_dist_all<Rvir_masks_gas)
-    gas_mask_gal = (gas_dist_all<Rgal_masks_gas)
-
-    gas_masked_distances = np.ma.array(gas_dist_all,mask=np.logical_not(gas_mask))
-    gas_masked_distances_gal = np.ma.array(gas_dist_all,mask=np.logical_not(gas_mask_gal))
-
-    gas_masked_masses = np.ma.array(gas_mass_multiple,mask=np.logical_not(gas_mask))
-    gas_masked_masses_gal = np.ma.array(gas_mass_multiple,mask=np.logical_not(gas_mask_gal))
+    cold_gas_masked_masses = np.ma.array(gas_mass_multiple,mask=np.logical_not((gas_dist_all<rvir_rock_select[np.newaxis].T)&(gas_temp<np.ones_like(rvir_rock_select[np.newaxis]).T*1.0e4)))
+    cold_gas_masked_masses_gal = np.ma.array(gas_mass_multiple,mask=np.logical_not((gas_dist_all<rgal_rock_select[np.newaxis].T)&(gas_temp<np.ones_like(rvir_rock_select[np.newaxis]).T*1.0e4)))
 
     #I can sum across each row to get the total mass
     #I can also maybe do np.min along each row to get the closest thing
 
-    low_res_n_in_rvir = np.sum(low_res_mask,axis=1)
-    hi_res_n_in_rvir = np.sum(hi_res_mask,axis=1)
+    low_res_n_in_rvir = np.sum((low_res_dist_all<rvir_rock_select[np.newaxis].T),axis=1)
+    hi_res_n_in_rvir = np.sum((hi_res_dist_all<rvir_rock_select[np.newaxis].T),axis=1)
 
     assert len(low_res_n_in_rvir)==len(id_rock_select)
 
     low_res_mass_in_rvir = low_res_n_in_rvir*low_res_mass
-    hi_res_mass_in_rvir = hi_res_n_in_rvir*particle_mass
+    hi_res_mass_in_rvir = hi_res_n_in_rvir*hi_res_mass
 
     star_mass_in_rvir = np.sum(star_masked_masses,axis=1)
     star_mass_in_rgal = np.sum(star_masked_masses_gal,axis=1)
 
     gas_mass_in_rvir = np.sum(gas_masked_masses,axis=1)
     gas_mass_in_rgal = np.sum(gas_masked_masses_gal,axis=1)    
+
+    temp_mask = np.ones_like(gas_masked_masses)*1.0e4
+    temp_mask_gal = np.ones_like(gas_masked_masses_gal)*1.0e4
+
+    cold_gas_mass_in_rvir = np.sum(cold_gas_masked_masses,axis=1)
+    cold_gas_mass_in_rgal = np.sum(cold_gas_masked_masses_gal,axis=1)
 
     hi_res_fraction = np.divide(hi_res_mass_in_rvir,np.add(hi_res_mass_in_rvir,low_res_mass_in_rvir))
 
@@ -441,6 +426,13 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
 
     print 'galaxy gas masses:'
     print gas_mass_in_rgal
+
+    #now I want to make a dictionary that has each halo and its properties in it
+
+    halo_dict = {'halo_ids':id_rock_select[hi_res_frac_mask],'M_vir':mass_rock_select[hi_res_frac_mask],'V_max':vmax_rock_select[hi_res_frac_mask],'R_vir':rvir_rock_select[hi_res_frac_mask],'centers':center_rock_select[hi_res_frac_mask],'hi_res_fraction':hi_res_fraction[hi_res_frac_mask],'M_star_gal':np.ma.getdata(star_mass_in_rgal[hi_res_frac_mask]),'M_star_vir':np.ma.getdata(star_mass_in_rvir[hi_res_frac_mask]),'M_gas_rvir':np.ma.getdata(gas_mass_in_rvir[hi_res_frac_mask]),'M_gas_cold_rvir':np.ma.getdata(cold_gas_mass_in_rvir[hi_res_frac_mask])}
+
+    return halo_dict
+    
 
 def return_specific_halo(halo_file,halo_id):
     #given a rockstar halo file and an id 
