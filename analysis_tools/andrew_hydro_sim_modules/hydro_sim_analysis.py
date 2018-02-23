@@ -301,7 +301,9 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
     #particles in each halo, and then maybe the positions of the
     #closest low res particles if there are mutliple within Rvir
     
-    #The first thing I'm going to do is identify every subahlo that is above the limit
+    #okay, this takes up an absurd amount of memory
+    #I'm going to make another module that does the same
+    #thing but uses less memory
 
     import numpy as np
 
@@ -433,6 +435,127 @@ def Load_hi_res_halo_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particle
 
     return halo_dict
     
+def Load_hi_res_halo_dict_mem_save(giz_hdf5,halo_file,Low_res_tolerance=1.0,save_particles=False,halo_lim=1.0e9):
+    #This is the same program as above, but reorganized to hopefully
+    #save enough memory to be practical    
+
+    import numpy as np
+
+    halo_dict = Load_Halo_Data(halo_file)
+    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True,add_stars=True,add_gas=True)
+
+    id_rock = halo_dict['ids'] 
+    M_rock = halo_dict['masses']
+    Vmax_rock = halo_dict['vmax']
+    Rvir_rock = halo_dict['rvir']
+    Rmax_rock = halo_dict['rmax']
+    centers_rock = halo_dict['centers']
+    velocities_rock = halo_dict['velocities']
+
+    mass_select = (M_rock>halo_lim)
+    
+    id_rock_select = id_rock[mass_select]
+    mass_rock_select = M_rock[mass_select]
+    vmax_rock_select = Vmax_rock[mass_select]
+    rvir_rock_select = Rvir_rock[mass_select]
+    rmax_rock_select = Rmax_rock[mass_select]
+    center_rock_select = centers_rock[mass_select]
+    velocities_rock_select = velocities_rock[mass_select]
+
+    rgal_rock_select = rvir_rock_select*0.1 #galaxy radius defined as just 10% Rvir
+    
+    #hi_res_coords = PD_dict['halo']['coords']
+    #hi_res_mass = PD_dict['halo']['masses'][0]
+    low_res_coords = PD_dict['disk']['coords']
+    low_res_mass = PD_dict['disk']['masses'][0]
+
+    star_coords = PD_dict['star']['coords']
+    star_mass = PD_dict['star']['masses']
+
+    gas_coords = PD_dict['gas']['coords']
+    gas_mass = PD_dict['gas']['masses']
+    gas_temp = PD_dict['gas']['temperature']
+
+    #Now I want to find the distance between every halo and every particle
+    #I can do this "easily" by using masked arrays
+    #
+    #The first step is to create a 3d array I can do this by taking a
+    #2d array of the halo centers and doing center_rock_select[:,np.newaxis]
+    #which makes a 3d array where each array of axis=0 is the halo center
+    
+    hi_res_ids = []
+    hi_res_mass = []
+    hi_res_vmax = []
+    hi_res_rvir = []
+    hi_res_centers = []
+    hi_res_fraction_list = []
+    hi_res_M_star_rvir = []
+    hi_res_M_star_gal = []
+    hi_res_M_gas_rvir = []
+    hi_res_M_gas_rvir_cold = []
+
+    #First do all the calculations associated with the low_res_particles
+
+    #okay this just takes alot of memory, so I'm just going to use a loop
+    print 'looping over halos'
+    for halo_id in range(len(center_rock_select)):
+        
+        halo_particle_diff = center_rock_select[halo_id] - low_res_coords
+        low_res_dist_all = np.linalg.norm(halo_particle_diff,axis=1)
+        assert len(low_res_dist_all) == len(low_res_coords)
+        low_res_n_in_rvir = np.sum((low_res_dist_all<rvir_rock_select[halo_id]))
+        low_res_mass_in_rvir = low_res_n_in_rvir*low_res_mass
+
+        hi_res_fraction = mass_rock_select[halo_id]/(mass_rock_select[halo_id]+low_res_mass_in_rvir)
+
+        if hi_res_fraction>=Low_res_tolerance:
+
+            #print 'calculate hi-res particles '+str(halo_id)+' :'
+
+            star_diff = center_rock_select[halo_id] - star_coords
+            star_dist_all = np.linalg.norm(star_diff,axis=1)
+
+            star_masked_distances = (star_dist_all<rvir_rock_select[halo_id])
+            star_masked_distances_gal = (star_dist_all<rgal_rock_select[halo_id])
+
+            star_mass_in_rvir = np.sum(star_mass[star_masked_distances])
+            star_mass_in_rgal = np.sum(star_mass[star_masked_distances_gal])
+
+            #gas calculations
+            gas_diff = center_rock_select[halo_id] - gas_coords
+            gas_dist_all = np.linalg.norm(gas_diff,axis=1)
+
+            gas_masked_distances = (gas_dist_all<rvir_rock_select[halo_id])
+            gas_masked_distances_gal = (gas_dist_all<rgal_rock_select[halo_id])
+
+            cold_gas_masked_distances = (gas_dist_all<rvir_rock_select[halo_id])
+            cold_gas_masked_distances_gal = (gas_dist_all<rgal_rock_select[halo_id])
+
+            gas_mass_in_rvir = np.sum(gas_mass[gas_masked_distances])
+            gas_mass_in_gal = np.sum(gas_mass[gas_masked_distances_gal])
+
+            cold_gas_in_rvir = np.sum(gas_mass[cold_gas_masked_distances])
+            cold_gas_in_rgal = np.sum(gas_mass[cold_gas_masked_distances_gal])
+
+            hi_res_ids.append(id_rock_select[halo_id])
+            hi_res_mass.append(mass_rock_select[halo_id])
+            hi_res_vmax.append(vmax_rock_select[halo_id])
+            hi_res_rvir.append(rvir_rock_select[halo_id])
+            hi_res_centers.append(center_rock_select[halo_id])
+            hi_res_fraction_list.append(hi_res_fraction)
+            hi_res_M_star_rvir.append(star_mass_in_rvir)
+            hi_res_M_star_gal.append(star_mass_in_rgal)
+            hi_res_M_gas_rvir.append(gas_mass_in_rvir)
+            hi_res_M_gas_rvir_cold.append(cold_gas_in_rvir)
+            
+    #now I want to make a dictionary that has each halo and its properties in it
+
+    print 'total halos: '+str(len(id_rock_select))
+    print 'hi res halos: '+str(len(hi_res_ids))
+
+    halo_dict = {'halo_ids':hi_res_ids,'M_vir':hi_res_mass,'V_max':hi_res_vmax,'R_vir':hi_res_rvir,'centers':hi_res_centers,'hi_res_fraction':hi_res_fraction_list,'M_star_gal':hi_res_M_star_gal,'M_star_vir':hi_res_M_star_rvir,'M_gas_rvir':hi_res_M_gas_rvir,'M_gas_cold_rvir':hi_res_M_gas_rvir_cold}
+
+    return halo_dict
 
 def return_specific_halo(halo_file,halo_id):
     #given a rockstar halo file and an id 
