@@ -122,7 +122,7 @@ def Load_Halo_Data_AHF(giz_halo_file,h=0.702):
     Rmax_ahf = f_ahf[:,12]/h
     Vmax_ahf = f_ahf[:,16]
     centers_ahf = np.zeros((len(f_ahf[:,8]),3))
-    centers_ahf[:,0], centers_ahf[:,1], centers_ahf[:,2] = f_ahf[:,5]*1000.0/h, f_ahf[:,6]*1000.0/h, f_ahf[:,7]*1000.0/h #convert to kpc
+    centers_ahf[:,0], centers_ahf[:,1], centers_ahf[:,2] = f_ahf[:,5]/h, f_ahf[:,6]/h, f_ahf[:,7]/h #convert to kpc (for AHF centers are already kpc)
     velocity_ahf = np.zeros((len(f_ahf[:,8]),3))
     velocity_ahf[:,0], velocity_ahf[:,1], velocity_ahf[:,2] = f_ahf[:,8], f_ahf[:,9], f_ahf[:,10]
     f_hires = f_ahf[:,37]
@@ -629,6 +629,7 @@ def Load_hi_res_halo_particle_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save
     
     #hi_res_coords = PD_dict['halo']['coords']
     #hi_res_mass = PD_dict['halo']['masses'][0]
+
     low_res_coords = PD_dict['disk']['coords']
     low_res_mass = PD_dict['disk']['masses'][0]
 
