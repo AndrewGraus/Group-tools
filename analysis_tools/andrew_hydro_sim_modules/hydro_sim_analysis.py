@@ -4,7 +4,7 @@
 
 #Problem, going to need to figure out how to handle identifying the host halo
 
-def Load_Particle_Data(giz_hdf5,add_dm=True,add_gas=False,add_stars=False,add_low_res=False):
+def Load_Particle_Data(giz_hdf5,add_dm=True,add_gas=False,add_stars=False,add_low_res=False,h=None):
     #This is just going to load particles from a snapshot into a custom dictionary
     #This works almost exactly like the gizmo hdf5s but I do this to save memory
     #if I only need certain particle species, and it also converts units
@@ -13,13 +13,14 @@ def Load_Particle_Data(giz_hdf5,add_dm=True,add_gas=False,add_stars=False,add_lo
     #eventually I'll modify this to load in different redshifts as well
 
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from math import log10
     import astropy.constants as const
     from astropy.cosmology import FlatLambdaCDM
 
     f = h5py.File(giz_hdf5)
-    h = f['Header'].attrs['HubbleParam'] #grab h
+    if h==None:
+        h = f['Header'].attrs['HubbleParam'] #grab h
     z = f['Header'].attrs['Redshift'] #grab z
 
     PD_dict = {}
@@ -75,7 +76,7 @@ def Load_Particle_Data(giz_hdf5,add_dm=True,add_gas=False,add_stars=False,add_lo
 
 def Load_Halo_Data(giz_halo_file,h=0.702):
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
 
     #This loads the halo data from a rockstar catalog into a dictionary with properties that I want
@@ -103,7 +104,7 @@ def Load_Halo_Data(giz_halo_file,h=0.702):
 
 def Load_Halo_Data_AHF(giz_halo_file,h=0.702):
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
 
     #This loads the halo data from a rockstar catalog into a dictionary with properties that I want
@@ -131,7 +132,7 @@ def Load_Halo_Data_AHF(giz_halo_file,h=0.702):
 
 def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print_hi_res_halos=False,subhalo_limit=10**10.0):
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
 
     #This script identifies all the halos above 1.0e10 (that's hard coded) and calculates all of the things
@@ -222,7 +223,7 @@ def Identify_Host(giz_hdf5,halo_file,add_velocity=False,print_values=False,print
 
 def Identify_Host_and_Subhalos(giz_hdf5,halo_file,print_values=True,subhalo_limit=10*10.0):
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
 
     #This script identifies all the halos above 1.0e10 (that's hard coded) and calculates all of the things
@@ -598,7 +599,7 @@ def Load_hi_res_halo_particle_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save
     elif hf_type=='AHF':
         halo_dict = Load_Halo_Data_AHF(halo_file,h=h)
         
-    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True,add_stars=True,add_gas=True)
+    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True,add_stars=True,add_gas=True,h=1.0)
 
     id_rock = halo_dict['ids'] 
     M_rock = halo_dict['masses']
@@ -722,7 +723,7 @@ def Load_hi_res_halo_particle_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save
             closest_low_res_particle.append(np.min(low_res_dist_all))
 
             #now lets actually save some halo properties
-            hi_res_particle_dict.update({str(halo_id):{'coords':star_diff[star_masked_distances],'ages':star_ages[star_masked_distances]}})
+            hi_res_particle_dict.update({str(halo_id):{'coords':star_diff[star_masked_distances],'ages':star_ages[star_masked_distances],'masses':star_mass[star_masked_distances]}})
             
     #now I want to make a dictionary that has each halo and its properties in it
 
@@ -737,7 +738,7 @@ def return_specific_halo(halo_file,halo_id):
     #given a rockstar halo file and an id 
     #it will return that halo's center, virial radius, and velocity
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
 
     #This script identifies all the halos above 1.0e10 (that's hard coded) and calculates all of the things
@@ -772,7 +773,7 @@ def return_specific_halo(halo_file,halo_id):
 
 def galaxy_statistics(giz_hdf5,halo_file,print_values=False,halo_id=None):
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
     from andrew_hydro_sim_modules.simple_tools import get_distance
@@ -844,7 +845,7 @@ def principle_axes(coordinates,masses,center,rad):
     #This is basically a modified version of Andrew Wetzel's code
     #to do the same thing
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
     from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
@@ -925,7 +926,7 @@ def report_eigen(giz_hdf5,halo_file,add_dm=True,add_gas=False,add_stars=False,ad
 
 def Calc_average_L(coordinates,masses,velocities,rad,center=[0.0,0.0,0.0],host_vel=[0.0,0.0,0.0]):
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
     from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
@@ -950,7 +951,7 @@ def Calc_average_L(coordinates,masses,velocities,rad,center=[0.0,0.0,0.0],host_v
 def Calc_average_L_shift(coordinates,masses,velocities):
     #For already shifted and cut cordinates
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
     from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
@@ -971,7 +972,7 @@ def Calc_average_L_shift(coordinates,masses,velocities):
 
 def report_average_L(giz_hdf5,halo_file,add_dm=True,add_gas=False,add_stars=False,add_low_res=False):
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
 
     host_center, host_rvir, host_vel = Identify_Host(giz_hdf5,halo_file,add_velocity=True)
@@ -1053,7 +1054,7 @@ def convert_to_cylindrical(coordinate,velocity,halo_center=[0.0,0.0,0.0],halo_ve
 
 def Rotate_to_z_axis(coordinates,velocities,rotation_axis):
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
     from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
@@ -1077,7 +1078,7 @@ def Rotate_to_z_axis(coordinates,velocities,rotation_axis):
     
 def report_velocities(giz_hdf5,halo_file,add_dm=True,add_gas=False,add_stars=False,add_low_res=False,vector=None,report_vel=True,halo_id=None):
     import numpy as np
-    import yt, h5py, re, os
+    import h5py, re, os
     from math import log10
     from astropy.cosmology import FlatLambdaCDM
     from andrew_hydro_sim_modules.simple_tools import get_distance_vector, get_distance
