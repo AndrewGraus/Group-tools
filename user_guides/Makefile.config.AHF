@@ -1,0 +1,130 @@
+#******************************************************************#
+# Sample Makefile.config.  Be sure to edit this to your likings    #
+# and copy it to Makefile.config.                                  #
+#******************************************************************#
+
+#------------------------------------------------------------------#
+# Select the target system                                         #
+# (define your own, if needed!)                                    #
+#------------------------------------------------------------------#
+#SYSTEM =	"Standard SQL"
+SYSTEM =	"Standard OpenMP"
+#SYSTEM =	"Standard MPI"
+#SYSTEM =	"Standard MPI+OpenMP"
+#SYSTEM =	"Debug"
+
+#------------------------------------------------------------------#
+# DEFINEFLAGS                                                      #
+#------------------------------------------------------------------#
+
+# DM Fullbox
+#------------------------------------------------------------------
+#DEFINEFLAGS    =       -DPERIODIC
+
+# DM Zooms
+#------------------------------------------------------------------
+DEFINEFLAGS    =       -DMULTIMASS -DPERIODIC
+
+# B01, B20, B50, B100
+#------------------------------------------------------------------
+#DEFINEFLAGS	=	-DMULTIMASS 
+
+# B320
+#------------------------------------------------------------------
+#DEFINEFLAGS	=	-DAHFshellshape
+
+# Box20b
+#------------------------------------------------------------------
+#DEFINEFLAGS	=	-DMULTIMASS -DBYTESWAP
+
+# HaloesGoingMAD
+#------------------------------------------------------------------
+#DEFINEFLAGS	=	-DMULTIMASS -DGAS_PARTICLES
+
+# SubhaloesGoingNotts (A1-A3, A4-5)
+#------------------------------------------------------------------
+#DEFINEFLAGS	=	-DMULTIMASS -DAHFrfocus -DDOUBLE
+#DEFINEFLAGS	=	-DMULTIMASS #-DAHFnewCloseRefDist
+
+# Box160, MW1.512
+#------------------------------------------------------------------
+#DEFINEFLAGS	=	-DMULTIMASS -DGAS_PARTICLES
+
+# LGR2Mpc, ... (basically any GADGET output produced by Gustavo!)
+#------------------------------------------------------------------
+#DEFINEFLAGS    =      -DMULTIMASS -DGAS_PARTICLES -DMETALHACK #-DAHFdisks #-DAHFnewHaloIDs #-DAHFexciseSubhaloStars #-DAHFbinary
+
+# CLUES-gasblobs
+#------------------------------------------------------------------
+#DEFINEFLAGS	=	-DMULTIMASS -DGAS_PARTICLES -DAHFptfocus=0 -DAHFnoremunbound -DDVIR_200RHOCRIT -DMANUAL_DVIR=200
+
+# MW1.1024g1bwk, g1536, g15784, GALFOBS
+#------------------------------------------------------------------
+#DEFINEFLAGS    =      -DMULTIMASS -DGAS_PARTICLES -DBYTESWAP
+
+# LTBvoids
+#------------------------------------------------------------------
+#DEFINEFLAGS    =      -DAHFrfocus -DDVIR_200RHOCRIT
+
+# GHALO
+#------------------------------------------------------------------
+#DEFINEFLAGS	=	-DMULTIMASS -DTIPSY_ZOOMDATA -DGAS_PARTICLES
+#DEFINEFLAGS	=	-DMULTIMASS -DGAS_PARTICLES -DBYTESWAP
+
+# d2100
+#-------
+#DEFINEFLAGS	=	-DMULTIMASS -DGAS_PARTICLES -DBYTESWAP
+
+
+#------------------------------------------------------------------#
+# Set environment for the system                                   #
+#------------------------------------------------------------------#
+ifeq ($(SYSTEM), "Standard SQL")
+	CC         	=	gcc -std=c99 -fopenmp
+	FC 	      	=	gfortran
+	OPTIMIZE	=	-O2
+	CCFLAGS		=
+	LNFLAGS		=	-lsqlite3
+	DEFINEFLAGS	+=	-DWITH_OPENMP -DAHF_SQL
+	MAKE		=	make
+endif
+
+ifeq ($(SYSTEM), "Standard OpenMP")
+	CC         	=	gcc -std=c99 -fopenmp
+	FC 	      	=	gfortran
+	OPTIMIZE	=	-O2
+	CCFLAGS		=	
+	LNFLAGS		=
+	DEFINEFLAGS	+=	-DWITH_OPENMP 
+	MAKE		=	make
+endif
+
+ifeq ($(SYSTEM), "Standard MPI")
+	CC         	=	mpicc -std=c99 -Wall -W
+	FC         	=	mpif90
+	OPTIMIZE	=	-O2
+	CCFLAGS		=
+	LNFLAGS		=
+	DEFINEFLAGS	+=	-DWITH_MPI
+	MAKE		=	make
+endif
+
+ifeq ($(SYSTEM), "Standard MPI+OpenMP")
+	CC         	=	mpicc -std=c99 -Wall -W -fopenmp
+	FC         	=	g77
+	OPTIMIZE	=	-O2
+	CCFLAGS		=
+	LNFLAGS		=
+	DEFINEFLAGS	+=	-DWITH_MPI -DWITH_OPENMP
+	MAKE		=	make
+endif
+
+ifeq ($(SYSTEM), "Debug")
+	CC         	=	gcc -std=c99 -g
+	FC 	      	=	g95
+	OPTIMIZE	=	-O0 
+	CCFLAGS		=
+	LNFLAGS		=
+	DEFINEFLAGS	+=	
+	MAKE		=	make
+endif

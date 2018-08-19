@@ -1,0 +1,157 @@
+%-------------------------------------------------------------------------
+%----  This file contains the input parameters needed at run-time for 
+%       simulations. It is based on and closely resembles the GADGET-3
+%       parameterfile (format of which and parsing routines written by 
+%       Volker Springel [volker.springel@h-its.org]). It has been updated
+%       with new naming conventions and additional variables as needed by 
+%       Phil Hopkins [phopkins@caltech.edu] for GIZMO.
+%-------------------------------------------------------------------------
+
+%----  Relevant files
+InitCondFile GVB_Y13_0TBD_b1_796_ICs.gadget
+OutputDir raw_output
+
+%---- File formats 
+ICFormat    1  % 1=binary, 3=hdf5, 4=cluster 
+SnapFormat  3  % 1=binary, 3=hdf5 
+
+%---- Output parameters 
+RestartFile                 restart 
+SnapshotFileBase            snapshot_m10e_fg
+OutputListOn                1  % =1 to use list in "OutputListFilename" 
+OutputListFilename          output_times.txt  % list of times for snaps 
+NumFilesPerSnapshot         1
+NumFilesWrittenInParallel   1  % must be < N_processors & power of 2
+
+%---- Output frequency (This will be ignored as we defined OutputListFilename)
+TimeOfFirstSnapshot     0.00793651 
+TimeBetSnapshot         1.1 
+TimeBetStatistics       0.05 
+
+%---- CPU-time limits 
+TimeLimitCPU            172800  % in seconds (2 days) 
+CpuTimeBetRestartFile   7200  	% in seconds 
+ResubmitOn              0 
+ResubmitCommand         my-scriptfile 
+
+%----- Memory allocation
+MaxMemSize          8700    % sets maximum MPI process memory use in MByte 
+PartAllocFactor     3.0     % memory load allowed for better cpu balance 
+BufferSize          200     % in MByte 
+
+%---- Characteristics of run 
+TimeBegin   0.00793651 % Beginning of the simulation stars at z=127
+TimeMax     1.0     % End of the simulation 
+
+%---- Cosmological parameters 
+ComovingIntegrationOn   1       % is it cosmological? (yes=1, no=0)
+BoxSize                 25000.0  % in code units
+Omega0                  0.266    % =0 for non-cosmological
+OmegaLambda             0.734    % =0 for non-cosmological
+OmegaBaryon             0.044   % =0 for non-cosmological
+HubbleParam             0.71     % little 'h'; =1 for non-cosmological runs
+
+%---- Accuracy of time integration 
+MaxSizeTimestep         0.1   % in code units, set for your problem
+MinSizeTimestep         1.0e-10 % set this very low, or risk stability
+
+%---- Tree algorithm, force accuracy, domain update frequency 
+TreeDomainUpdateFrequency   0.01	% 0.0005-0.05, dept on core+particle number  
+
+%---- System of units 
+UnitLength_in_cm            3.085678e21     % 1.0 kpc/h
+UnitMass_in_g               1.989e43  	    % 1.0e10 solar masses/h
+UnitVelocity_in_cm_per_s    1.0e5   	    % 1 km/sec
+UnitMagneticField_in_gauss  1.0   	        % 1 gauss
+GravityConstantInternal     0		        % calculated by code if =0
+
+%---- Initial temperature & temperature floor 
+InitGasTemp     0	    % set by IC file if =0 
+MinGasTemp      10.	    % don't set <10 in explicit feedback runs, otherwise 0
+
+%---- Density/volume estimation (kernel) 
+DesNumNgb               32      % 32 for standard kernel, 60-114 for quintic 
+MaxHsml                 1.0e10  % minimum gas kernel length (some very large value to prevent errors)
+MinGasHsmlFractional    1.0       % minimum kernel length relative to gas force softening (<= 1)
+
+%---- Turbulent Diffusion Master Switch (TURB_DIFFUSION on)
+TurbDiffusionCoefficient 1.0    % Normalizes diffusion rates relative to Smagorinsky-Lilly theory [best calibration] (~0.5-2)
+
+%---- Gravitational softening lengths 
+%----- Softening lengths per particle type. If ADAPTIVE_GRAVSOFT is set, these  
+%-------- are the minimum softening allowed for each type ------- 
+d%-------- (units are co-moving for cosmological integrations)
+SofteningGas    1.1    % gas (type=0) (in units above, =1 pc softening)
+SofteningHalo   1.1    % dark matter/collisionless particles (type=1)
+SofteningDisk   2.4    % collisionless particles (type=2)
+SofteningBulge  4.8  % collisionless particles (type=3)
+SofteningStars  0.15   % stars spawned from gas (type=4)
+SofteningBndry  4.8    % black holes (if active), or collisionless (type=5)
+%---- if these are set in cosmo runs, SofteningX switches from comoving to physical
+%------- units when the comoving value exceeds the choice here
+%------- (these are ignored, and *only* the above are used, for non-cosmo runs)
+SofteningGasMaxPhys     0.0014   % switch to 0.5pc physical below z=1 
+SofteningHaloMaxPhys    0.025
+SofteningDiskMaxPhys    0.6
+SofteningBulgeMaxPhys   1.2
+SofteningStarsMaxPhys   0.003
+SofteningBndryMaxPhys	1.2
+%----- parameters for adaptive gravitational softening 
+AGS_DesNumNgb           32  % neighbor number for calculating adaptive gravsoft
+
+%-------------------------------------------------------------------------
+%-------------------------------------------------------------------------
+%---------- Physics Modules ----------------------------------------------
+%-------------------------------------------------------------------------
+%-------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------
+%------------------ Star, Black Hole, and Galaxy Formation ---------------
+%-------------------------------------------------------------------------
+
+%---- Star Formation parameters (GALSF on)
+CritPhysDensity     1000.    %  critical physical density for star formation (cm^(-3)) 
+SfEffPerFreeFall    1.0     %  SFR/(Mgas/tfreefall) for gas which meets SF criteria
+
+
+%---- sub-grid (Springel+Hernquist/GADGET/AREPO) "effective equation of state" 
+%------- star formation+feedback model (GALSF_EFFECTIVE_EQS on)
+MaxSfrTimescale     4.0         % code units (SF timescale at 2-phase threshold)
+TempSupernova       3.0e8       % in Kelvin (temp of hot gas in 2-phase model)
+TempClouds          1000.0      % in Kelvin (temp of cold gas in 2-phase model)
+FactorSN            0.1         % SNe coupling frac (frac of egy retained in hot)
+FactorEVP           3000.0      % controls Kennicutt normalization 
+FactorForSofterEQS  1.0         % interpolate between 'stiff' and isothermal EOS
+%------- the sub-grid "decoupled winds" model (GALSF_SUBGRID_WINDS on)
+WindEfficiency          2.0     % mass-loading (Mdot_wind = SFR * WindEfficiency) 
+WindEnergyFraction      0.06    % fraction of SNe energy in winds (sets velocity) 
+WindFreeTravelMaxTime   0.1     % 'free-stream time' in units of t_Hubble(z)
+WindFreeTravelDensFac   0.1     % 'free-stream' until density < this * CritPhysDensity
+%------- alternative winds (GALSF_SUBGRID_DMDISPERSION or GALSF_SUBGRID_VARIABLEVELOCITY)
+%------- (scaling with local dark matter properties, as Dave/Oppenheimer/Mannucci/Illustris)
+VariableWindVelFactor    1.0    % wind velocity relative to estimated halo v_escape
+VariableWindSpecMomentum 5000.  % wind momentum per unit stellar mass (code velocity units)
+
+%-------------- FIRE (PFH) explicit star formation & feedback model
+%--- initial metallicity of gas & stars in simulation 
+InitMetallicity             0.0001  % initial gas+stellar metallicity (in solar)
+InitStellarAge              0.001   % initial mean age (in Gyr; for stars in sim ICs)
+%--- local radiation-pressure driven winds (GALSF_FB_RPWIND_LOCAL) 
+WindMomentumLoading         1.0     % fraction of photon momentum to couple
+%--- SneII Heating Model (GALSF_FB_SNE_HEATING) 
+SNeIIEnergyFrac             1.0     % fraction of mechanical energy to couple
+%--- HII region photo-heating model (GALSF_FB_HII_HEATING)  
+HIIRegion_fLum_Coupled      1.0     % fraction of ionizing photons allowed to see gas
+%--- long-range radiation pressure acceleration (GALSF_FB_RT_PHOTONMOMENTUM) 
+PhotonMomentum_Coupled_Fraction  1.0  % fraction of L to allow incident
+PhotonMomentum_fUV          0.01    % incident SED f(L) in UV (minimum scattering)
+PhotonMomentum_fOPT         0.01   % incident SED f(L) in optical/near-IR 
+%--- gas return/recycling (GALSF_FB_GASRETURN) 
+GasReturnFraction           1.0     % fraction of gas mass returned (relative to ssp)
+GasReturnEnergy             1.0     % fraction of returned gas energy+momentum (relative to ssp)
+%--- cosmic rays (COSMIC_RAYS)
+CosmicRay_SNeFraction       0.1     % fraction of SNe ejecta kinetic energy into cosmic rays (~10%)
+
+
+%-------------- Grackle UVB file (GRACKLE on)
+GrackleDataFile		     CloudyData_UVB=HM2012.h5

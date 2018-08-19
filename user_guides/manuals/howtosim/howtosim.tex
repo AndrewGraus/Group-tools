@@ -1,0 +1,649 @@
+\documentclass[10pt,a4paper,onecolumn]{article}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings} 
+
+\lstset{% 
+  basicstyle=\ttfamily, 
+  breaklines=true,
+  columns=fullflexible,
+  escapeinside = ||,
+  breakindent=0pt} 
+\lstnewenvironment{code}{}{} 
+
+
+\newcommand{\hmpc}{\mathrm{Mpc}/h}
+
+
+\title{How to Simulate:  A Beginner's Rundown}
+\author{Shea Garrison-Kimmel, Miguel Rocha, Oliver Elbert, Andrew Graus}
+
+\begin{document}
+
+\maketitle
+\section{Introduction}
+This is \textit{NOT} intended to be a replacement for the user's guides
+of the various codes that will be discussed here, but hopefully it will
+give some helpful hints and help you understand the user's guides
+more effectively.
+
+This guide is going to use the following codes, with the dependencies
+listed:
+\begin{enumerate}
+\item \texttt{MUSIC} (\url{http://www.phys.ethz.ch/~hahn/MUSIC/})
+\item \texttt{Gadget} (\url{http://www.mpa-garching.mpg.de/gadget/})
+\item \texttt{Gizmo} (\url{http://www.tapir.caltech.edu/~phopkins/Site/GIZMO_files/gizmo_documentation.html})
+\item \texttt{AHF} (\url{http://popia.ft.uam.es/AHF/Download.html})
+\item  \texttt{rockstar} (\url{https://code.google.com/p/rockstar/})
+\item \texttt{consistent-trees} (\url{https://code.google.com/p/consistent-trees/})
+\end{enumerate}
+In order to use any of these codes you have to compile codes that they depend on (things like software libraries). These codes include things like:
+\begin{enumerate}
+\item an MPI; I recommend MPICH if there isn't a satisfactory one installed 
+already (\url{http://www.mpich.org/downloads/} -- grab the top one)
+\item FFTW, versions 2 \textbf{and} 3 (\url{http://www.fftw.org/})
+\item GSL (\url{http://www.gnu.org/software/gsl/})
+\item optionally, HDF5 version 1.6 (version 1.8 does \textbf{not} work with Gadget) 
+(\url{http://www.hdfgroup.org/HDF5/})
+\end{enumerate}
+
+Finally, several python scripts that were written by various students and post-docs are mentioned in this text, in general they can all be found our shared github:
+
+\bigskip
+\url{https://github.com/AndrewGraus/Group-tools}. 
+\bigskip
+
+Most of these codes should work with MUSIC ICs, and GIZMO outputs, but they may need updating as codes change. As these codes were written by multiple people and then edited by others the documentation and coding styles vary.
+
+\subsection{Using Modules}
+
+The good news is that most modern supercomputing clusters (including Greenplanet!) now use a module system, so you hopefully won't have to compile these yourself, you simply have to load the appropriate module. steps for how to do this can be found in multiple places, including :
+
+\begin{enumerate}
+\item High-End Computing Capability (HECC; NASA) (\url{https://www.nas.nasa.gov/hecc/support/kb/using-software-modules_115.html})
+
+\item Texas Advanced Computing Center (TACC) (\url{https://portal.tacc.utexas.edu/software/modules})
+\end{enumerate}
+
+Section 2 goes over how to compile these codes, and will be left there for completeness, but with any luck you won't have to compile things like FFTW or GSL yourself anymore.
+
+\subsection{Outline of running a simulation}
+
+The basic steps of running a cosmological zoom-in simulation from start to finish are
+listed below.  I'll describe them all in the sections that follow.
+\begin{enumerate}
+\item Choose a problem of interest (mass range, environment, etc.)
+\item Select your box size and starting redshift
+\item Create unigrid initial conditions at medium resolution (probably $512 ^3$ particles) 
+with \texttt{MUSIC} -- $\sim1$ hour anywhere
+\item Run said ICs with \texttt{Gadget}, probably saving only a few timesteps -- $\sim1$ 
+week on Greenplanet or less on NASA/XSEDE
+\item Halo find on that box with \texttt{AHF} (because  \texttt{rockstar} is non-periodic 
+by default) $\sim1$ hour anywhere
+\item Make cuts on your halo catalog to find an object that meets the criteria set out in Step 1. 
+ If there aren't any, go back to step 3 and repeat with a new random seed.
+\item Select the Lagrangian volume of that object -- $\sim5$ minutes anywhere
+\item Create zoom-in initial conditions at higher resolution (probably not yet at the full 
+resolution you're aiming for) using the same random seed with \texttt{MUSIC} -- $\sim1-2$ days on Blacklight
+\item Run those initial conditions with \texttt{Gadget} -- could take any amount of time
+\item Run \texttt{rockstar} on the output snapshots
+\item If everything went ok and you're not yet at the targeted resolution, go back and recreate your
+ICs at even higher resolution.
+\item Run \texttt{consistent-trees} to create a merger tree
+\item Do your analysis -- turn the merger tree into something you can use and make some science!
+\end{enumerate}
+
+\section{Prerequisites:  Compiling Dependencies and Setting Environment Variables}
+Here I'll give brief instructions for how to compile the dependencies for \texttt{MUSIC}
+and \texttt{Gadget}.  \texttt{rockstar},\texttt{consistent-trees}, and \texttt{AHF} don't 
+really have any dependencies and should compile out of the box.
+
+Throughout this document, I'm going to assume that you do not have root
+permissions and thus have to compile your codes from scratch and can't put them
+in \texttt{/}.  Instead, we'll be directing all of our compiled binaries and libraries to live in
+\texttt{\$HOME/code/compiled/}.
+
+\subsection{MPI}
+If there's an MPI installed already, you might want to give it a shot.  That said,
+in 2010, I had difficulties with the MPI's pre-installed on Greenplanet.  If you use
+a pre-installed MPI, then everywhere that you see either
+\begin{code}
+-I/$(HOME)/code/compiled/include
+\end{code}
+or
+\begin{code}
+-L/$(HOME)/code/compiled/lib
+\end{code}
+below, you should add
+\begin{code}
+-I/path/to/mpi/include
+\end{code} and 
+\begin{code}
+-L/path/to/mpi/lib
+\end{code}
+
+Now, if you need to compile your own MPI, don't be scared --- it's not actually
+that hard\ldots assuming the system that you're working on has a good version 
+of GCC installed.  
+\begin{enumerate}
+\item Download and unpack the code with \texttt{wget <url>} and 
+\texttt{tar -xvf <filename>}
+\item Configure the code by  \texttt{cd}-ing into the directory and running
+\begin{code}
+./configure --prefix=$HOME/code/compiled 
+\end{code}
+\item Make and install the binaries with \texttt{make \&\& make install}.
+\end{enumerate}
+
+
+\subsection{Environment Variables}
+Now that MPI is installed, we need to tell your system (bash) to use
+that installed package.  Specifically, that means that we have to change
+two environment variable, \texttt{PATH} and \texttt{LD\_LIBRARY\_PATH}. 
+The former tells bash which folders to search for executables (e.g.  \texttt{cd}, 
+\texttt{make}, \texttt{python}, \texttt{mpicc}); the latter tells the LD library 
+linker which folders to search for libraries at compile and run time.
+
+You can edit your variables for a single session via the command line, but
+we want these definitions to stick when we open a new command line, so
+put them in either your \texttt{\$HOME/.bashrc} or \texttt{\$HOME/.bash\_profile}.  
+We also don't want to eliminate what's already in those paths; instead we 
+want to prepend to those variables.  So, add the following lines to one of those files:
+\begin{code}
+export PATH=$HOME/code/compiled/bin:$PATH
+export LD_LIBRARY_PATH=$HOME/code/compiled/lib:$LD_LIBRARY_PATH
+\end{code}
+and run \texttt{source \$HOME/.bashrc} to update your variables.
+
+\subsection{FFTW}
+\subsubsection{FFTW2 for Gadget}
+\texttt{Gadget} can only use version 2 of FFTW (currently 2.1.5), whereas 
+\texttt{MUSIC} needs FFTW version 3 for multi-threading reasons.  Let's start 
+with FFTW2, which depends on your MPI installation and thus will tell you 
+whether or not you did the previous step correctly.
+
+Again, download and untar the code, then configure, compile, and install with
+\begin{code}
+./configure --prefix=$HOME/code/compiled --enable-mpi --enable-type-prefix && make && make install
+\end{code}
+The second option tells FFTW to name the files to indicate that they're in double
+precision, which \texttt{Gadget} typically expects.  If that worked correctly (which it should
+have), then awesome, and let's do it again with single precision, just to have it:
+\begin{code}
+make clean && ./configure --prefix=$HOME/code/compiled  --enable-mpi --enable-type-prefix --enable-float && make && make install
+\end{code}
+
+\subsubsection{FFTW3 for MUSIC}
+Now let's get FFTW3 installed and compiled for \texttt{MUSIC}.  We want to make sure that
+it has multithreading capabilities, and it won't hurt to get it working with MPI as well.
+Again, download and untar the code,  \texttt{cd} into the directory, and do:
+\begin{code}
+./configure --prefix=$HOME/code/compiled --enable-openmp && make && make install
+\end{code}
+Don't worry -- it won't overwrite your FFTW2 include files.  FFTW3 files are named differently.  
+You can also add \texttt{--enable-mpi} and/or \texttt{--enable-threads} if you'd like -- 
+if FFTW-2 compiled, these should compile without issues.
+
+\subsection{GSL}
+GSL is super easy and has no dependencies (that I know of).  Simply download
+and untar as usual and run
+\begin{code}
+./configure --prefix=$HOME/code/compiled && make && make install
+\end{code}
+
+\section{Selecting the boxsize and starting redshift}
+When selecting the boxsize, you have to balance the computational costs
+with mass resolution gains.  That is, the density in the box is fixed, so increasing
+the box size will add mass to the simulation and either push up the number
+or mass of particles.  However, you don't want to go too small, because
+numerical issues will crop up and you won't get a fair sample of the universe.
+That specific ``too small" is hard to calculate, but a rule of thumbs that I follow is
+$L_{\rm box} \gtrsim 5~\hmpc$ for dwarfs and $L_{\rm box} \gtrsim 25~\hmpc$
+for MW-size galaxies.  Of course, increasing your box size will also find more objects
+that might meet your criteria.
+
+You also want to make sure that you will have enough particles in your object
+of interest at the unigrid resolution ($n_p = 512^3$) to accurately compute the
+Lagrange volumes.  That means that you should
+\begin{enumerate}
+\item Calculate the particle mass for a few box sizes for a fix number of particles
+\item Find out how many particles would be in a halo of your targeted mass for 
+each box size, and eliminate any box sizes that have fewer than $\sim3000$ particles
+\end{enumerate}
+
+I won't go further into the various arguments for larger and smaller boxes here, because it 
+can get very lengthy.  
+
+The starting redshift is a bit more concrete, and a cursory explanation is given in Section 
+6 of Jose's paper.  It depends on the box size and resolution --- higher mass particles
+means a lower starting redshift, essentially.
+
+\section{Creating unigrid ICs}
+Now you're ready to create initial conditions for your cosmological box, 
+from which you're going to select zoom-in targets.  We'll use \texttt{MUSIC} for this, 
+so download the code and  \texttt{cd} into the directory, replace the \texttt{Makefile} 
+with the included \texttt{Makefile.music}, run \texttt{make}, and
+you should get a \texttt{MUSIC} binary.  The only major change I've made 
+in the included Makefile is to add the include and lib directories that we 
+installed FFTW into.  That is, I've put
+\begin{verbatim}
+-I$(HOME)/code/compiled/include
+-L$(HOME)/code/compiled/lib
+\end{verbatim}
+at the start of CPATHS and LPATHS, respectively.  This points \texttt{c++} 
+to the proper header files and libraries for FFTW3 that we just installed.  
+
+You'll also need to create a .conf file, which is a \texttt{MUSIC} configuration file.  There
+should be a sample included with this document named \texttt{fullbox\_music.conf}, and
+there is also a sample in the \texttt{MUSIC} user's guide.  I'll run through the options that 
+I  think are important for a fullbox simulation here and that you're likely to change. If you are running a simulation for the FIRE collaboration they have some specific requirements for the setting you should use for consistency between runs, so consult the FIRE wiki for that information. I also want to note that you shouldn't move options between sections (which are delineated by bracketed keywords, e.g. ``[setup]") and you \textbf{absolutely should} read the user's guide:
+
+\begin{description}
+\item[boxlength]  The size of the box.  Assumed to be in $\hmpc$ but the distance
+unit can be changed to kpc/h by putting \texttt{gadget\_usekpc = True} in the 
+[output] section.
+\item[zstart] The initial redshift.
+\item[levelmin] Sets the number of particles that you want in your low resolution
+box.  There will be $\left(2^{\rm levelmin}\right)^3$ particles in the box.
+\item[levelmax] Set this equal to levelmin for now.
+\item[ref\_extent] and \textbf{ref\_offset} Set these to ``0,0,0" for now
+\item[cosmology] The cosmology section is largely self-explanatory.  The 
+transfer function, however, must either be selected from one of the options built
+into \texttt{MUSIC}, which are listed in the user's guide (I've found eisenstein to work fine),
+or you can set 
+\begin{verbatim}
+transfer	= camb_file  
+transfer_file = path/to/file.dat
+\end{verbatim}
+and use a file produced by CAMB for your specific cosmology and redshift.  
+There should be a set of files for the WMAP-7 cosmology included with 
+this document, but if you're using another cosmology, you're on your own.  
+That said, eisenstein will probably work fine.  
+\item[random section] The random section essentially determines the box.  
+Choose  a six digit seed for the level that you've initialized the box at, and change
+it if you want to try another box.  That is, if you've set
+\begin{verbatim}
+levelmin = X
+\end{verbatim}
+then you should set
+\begin{verbatim}
+seed[X] = any six digit number
+\end{verbatim}
+\item[disk\_cached] If you have plenty of RAM available, set this to no.  If 
+you're nearing your limit, though, set it to yes.  Essentially, this stores the random 
+numbers generated to a file, rather than keeping them in RAM forever.  However, 
+it slows your IC generation down significantly because \texttt{MUSIC} will spend
+a lot of time reading from and writing to the disk.
+\item[output section] Set \texttt{format = gadget2} and choose a filename.
+\end{description}
+I've always left the poisson section identical to that in the sample parameter file.
+
+Now you can run \texttt{MUSIC}.  If you're in an interactive session, that means simply running
+\begin{verbatim}
+export OMP_NUM_THREADS=<number of processors to run on>
+./music/music <configuration file>
+\end{verbatim}
+Otherwise, you should wrap those command in a PBS file; there should 
+be a sample provided with this document called music.pbs.
+
+\section{Running the unigrid ICs}
+
+\subsection{Gizmo}
+
+The Gizmo user's guide summarizes everything from how to compile the code, and how to run it, to what all the parameters are and what values to use. Furthermore, Phil does a much better job at summarizing it then I could, so you should refer to the user's guide for how to run the ICs.
+
+As a general rundown, you are going to need to compile Gizmo, using a configuration file which sets options for the code including physics, these are compile time options, so if you need to modify them the code \emph{must} be re-compiled or they will not take effect. These are set by the Config.sh file, and should look something like this:
+
+\begin{verbatim}
+HAVE_HDF5
+OUTPUT_POSITIONS_IN_DOUBLE
+PERIODIC
+MULTIPLEDOMAINS=16
+PMGRID=512
+\end{verbatim}
+
+Because we are running single resolution dark matter only ICs there aren't many compile time options we need to set.
+
+The second thing you will need to do to run the code is set the runtime options, which are controlled by a parameter file. These set things like how often to output snapshots of the simulation, and the softening lengths. You can change these parameters if you restart the run, but it is very rarely a good idea unless you are trying to make the run more efficient.
+
+Running the code with differ from system to system but on a system like Stampede 2 the command to run the code will look something like this:
+
+\begin{verbatim}
+ibrun ./phopkins-gizmo/GIZMO ./pro.param
+\end{verbatim}
+
+This also assumes your \texttt{GIZMO} code is in the ./phopkins-gizmo folder, and your parameter file is called pro.param. NOTE: the actual command you will use to run your simulation will vary depending on what system you are on, so it is imperative that you check your supercomputer's user guide for what to use. For example, ibrun is the command which tells the computer you are running a parallelized program, there are different commands for different MPIs, this is the one for Stampede 2.
+
+\subsubsection{Making your runs more efficient}
+
+Probably the most difficult thing about running \texttt{GIZMO} is that optimizing runs can be difficult and requires a bit of trial and error. The main things that drive the running and efficiency of runs are how much memory you use and how the code balances different processes.
+
+Managing memory is not much of a problem for dark matter only runs and low res hydro, but if you are running a state-of-the-art simulation you are going to be pushing the limits of the supercomputers we use.
+
+In this case you have to be careful about how you manage memory. This is controlled by how many nodes you are using, and how many mpi processes you are running on those nodes. The amount of memory you use must be set at runtime with the variable (in the parameter file):
+
+\begin{verbatim}
+MaxMemSize          4000    % sets maximum MPI process memory use in MByte
+\end{verbatim}
+
+For example, If I'm running on a node that has 4 cores and 16 GB of memory then I can set my \texttt{MaxMenSize} to \emph{at most} 4 GB.
+
+This will sometimes not be enough, and you will have to compensate by ``tying'' cores together with OPENMP. OPENMP is a program that allows you to share memory over different cores. For example if I needed 8 GB for each process in the example above I can double the memory per process by setting OPENMP=2 (in the Config.sh file) and then that allows me to set  \texttt{MaxMenSize} to 8 GB. You now can only start 2 MPI processes per node, so you need to use more nodes to run at the same speed, but this is often unavoidable with high resolution \texttt{GZIMO} runs.
+
+You can't set the \texttt{MaxMenSize} to the maximum amount of memory because you also need a communication buffer:
+
+\begin{verbatim}
+BufferSize          200     % in MByte
+\end{verbatim}
+
+So your \texttt{MaxMenSize} \texttt{+} \texttt{BufferSize} \texttt{*} \texttt{n\_mpi}must be equal to the total amount of memory on the node.
+
+Another way to make runs more efficient is to make sure the code is not spending too much or too little time doing the domain decomposition (part of the calculation of the gravitational force). For most time steps only a very small fraction of the particles will actually be updates, so recalculating the tree at every timestep would be incredibly inefficient. This is controlled by the TreeDomainUpdateFrequency parameter 
+
+\begin{verbatim}
+%---- Rebuild domains when >this fraction of particles active  
+TreeDomainUpdateFrequency    0.005  % 0.0005-0.05, dept on core+particle number 
+\end{verbatim}
+
+Setting this to zero will rebuild the tree at every timestep, and will almost never be the best choice.
+
+A good rule of thumb that I've been told to use is to check the cpu.txt log file (which should be where your snapshots are written). It should look something like this:
+
+\begin{verbatim}
+Step 0, Time: 0.00793651, CPUs: 128
+total             160.97  100.0%
+treegrav           86.20   53.6%
+treebuild        2.48    1.5%
+treeupdate       0.00    0.0%
+treewalk        47.07   29.2%
+treecomm         1.41    0.9%
+treeimbal       32.96   20.5%
+pmgrav              7.98    5.0%
+hydro              37.19   23.1%
+density         26.27   16.3%
+denscomm         1.19    0.7%
+densimbal        1.54    1.0%
+hydrofrc         5.07    3.2%
+hydcomm          0.31    0.2%
+hydmisc          0.23    0.1%
+hydnetwork       0.00    0.0%
+hydimbal         1.35    0.8%
+hmaxupdate       0.06    0.0%
+domain             12.43    7.7%
+potential           0.00    0.0%
+predict             0.00    0.0%
+kicks               0.00    0.0%
+i/o                10.15    6.3%
+peano               1.18    0.7%
+sfrcool             0.09    0.1%
+blackholes          0.00    0.0%
+fof/subfind         0.00    0.0%
+gas_return          1.27    0.8%
+snII_fb_loop        1.30    0.8%
+hII_fb_loop         0.02    0.0%
+localwindkik        0.05    0.0%
+misc                3.11    1.9%
+\end{verbatim}
+
+This tells you where the code is spending its time. In general, you should set the TreeDomainUpdateFrequency such that the domain value is equal to the imbalances (treeimbal+densimbal+hydimbal). If the imbalances dominated the runtime (as above) try decreasing the value of TreeDomainUpdateFrequency.
+
+\subsection{Gadget}
+Now you're ready to run those initial conditions with \texttt{Gadget}.  Let's start by 
+compiling the code, so let's again \texttt{cd} into the directory replace the
+\texttt{Makefile} with the one included, \texttt{Makefile.GadFullBox}.  There 
+are a number of compile time options that I've set at the top that should be a working 
+starting point for most simulations.  Specifically, I've set the following options on -- 
+you shouldn't have to change anything except for possibly the value 
+that -DPMGRID takes.
+\begin{itemize}
+\item -DPERIODIC 
+\item -DPEANOHILBERT
+\item  -DWALLCLOCK
+\item -DPMGRID=XXX, where XXX = $2^{\rm levelmin}$
+\item -DDOUBLEPRECISION      
+\item  -DDOUBLEPRECISION\_FFTW
+\item -DSYNCHRONIZATION
+\end{itemize}
+I've also created a new SYSTYPE, which sets the include and library paths
+to point to \texttt{\$HOME/code/compiled/include} and 
+\texttt{\$HOME/code/compiled/lib}.  Now run \texttt{make} and you should 
+get a \texttt{Gadget2} binary.
+
+Next we need to set up a \texttt{Gadget} parameter file.  Again, there should be 
+a sample included with this document, but you should \textbf{100\% absolutely} 
+read the user's guide.  I'm not going to run through most of the options; I'll instead 
+focus on those that you're likely to have to change.  Do NOT take this as ringing
+endorsement of the values for the other parameters (though they seem to work ok).
+\begin{description}
+\item[InitCondFile] Set as either the relative (from where the run is initiated) or
+absolute path to the initial conditions file produced by \texttt{MUSIC} above.  
+\item[OutputDir] Set as either the relative or absolute path to an existing directory
+that you want snapshots and restart files to be saved in.
+\item[SnapshotFileBase] The name of your output snapshots, so files will be named 
+OutputDir/snapshot\_xxx.
+\item[OutputListFilename] The path to a file that contains a list, one per line, of
+scale factors at which you want outputs.  An example is included as a\_out\_short.txt.
+\item[TimeLimitCPU] The length of time the run can go for, in seconds.
+\item[TimeBegin] The scale factor at which you're starting the simulation
+\item[Omega0, OmegaLambda, OmegaBaryon, HubbleParam] The
+cosmology of the simulation; ought to match what you used in the .conf file,
+but here HubbleParam is $h$.
+\item[BoxSize] The size of the box, in the length units of the simulations.
+\item[UnitLength\_in\_cm] The length units that you want to use; defaults to Mpc/h,
+but you can set it to kpc/h if you like.
+\item[SofteningHalo] The softening length that you want to use for the run.  Typically
+you want to set it to $\sim4$ times the Power (2003) radius for the mass of halo that
+you're targeting.
+\end{description}
+As an aside, the UnitLength and UnitVelocity together define the time unit for isolated
+simulations (in cosmological simulations, Time is $a$, the scale factor).
+
+Now you can finally run the simulation.  If you're in an interactive session, you can do
+\begin{verbatim}
+mpiexec.hydra -np ./Gadget-2.0.7/Gadget2/Gadget2 <num procs> gadget.param
+\end{verbatim}
+Otherwise, you should wrap that in a PBS script like the included gadget.pbs.
+
+\section{Halo Finding on the Full Box}
+I recommend running \texttt{AHF} on the $z = 0$ snapshot -- it is very easy to run 
+\texttt{AHF} with periodic boundary conditions, whereas doing so with 
+\texttt{rockstar} is annoying.  The main files that you will edit when using \texttt{AHF} are:
+
+\begin{description}
+\item[Makefile.config] The file where you set your defineflags and tell \texttt{AHF} to run in OpenMP or MPI
+\item[AHF.input] The file that tells \texttt{AHF} where to look for the inputs and where to save the outputs (among other things)
+\end{description}
+
+\textbf{DO NOT} mess with the \texttt{AHF} Makefile proper.  They warn you about this in the user guide, and with good reason.
+
+In \texttt{Makefile.config} the main thing to do is set the defineflags.  For a fullbox like this the only flag needed is \texttt{DPERIODIC} to set periodic boundary conditions.  The Makefile.config included here has sets of defineflags  what they're used for.  The defineflags under \texttt{DM Zooms} are used for running AHF on a snapshot from a DM Zoom-in simulation.  Those under \texttt{HaloesGoingMad} were used for snapshots in the Haloes Going Mad Project.  You can simply uncomment the set under whichever section is relevant to what you're doing (here that would be \texttt{DM Fullbox}).  The rest should be set for \texttt{AHF} to run on greenplanet.
+
+The \texttt{AHF.input} file is slightly more interesting.  The main things you'll want to edit are:
+\begin{description}
+\item[ic\_filename] The location of the snapshot you want to run on.  Should be of the form: \texttt{path/to/snap/snapname}
+\item[ic\_filetype] An integer that tells AHF what kind of file it's looking at.  Should be 60 for a Gadget snapshot.
+\item[outfile\_prefix] The first part of the name of for the files AHF outputs.  Should be \texttt{/desired/location/name}
+\end{description}
+Other important items are: \texttt{NminPerHalo}, the minimum number of particles for a halo, \texttt{RhoVir}, which sets the normalization for \texttt{AHF}'s densities, and \texttt{Dvir}, which tells AHF the overdensity to use to define the virial radius.  
+
+Because AHF normalizes densities it is important to keep track of whether \texttt{RhoVir} is set to 0 or 1.  If set to 0, densities will be normalized to the critical density at the snapshot's redshift.  If set to 1 the background density will be used instead.  If you want to use \texttt{AHF}'s density information here or on the zoom you'll have to multiply by whichever you chose to normalize by.  Either works, but do be sure to keep track of which you used.
+
+Once you have your files set, enter \texttt{make} to compile \texttt{AHF}, and then you simply need to enter \texttt{./bin/AHF-v1.0-043 AHF.input} (preferably in a pbs script) in the \texttt{AHF} directory for it to run.  On greenplanet this should take a few hours using an 8-core node, at which point you will have a bunch of output files to add to the IRATE file using \texttt{ahf2irate}.
+
+Alternatively, you can use the method described below to run  \texttt{rockstar}, 
+but set the first snapshot analyzed to the be $z = 0$ particle data.
+
+Either way, you'll end up with a halo catalog that you can search for an
+object that meets your criteria.  You'll probably end up with hundreds.  Unless
+your problem has an environmental dependence, you probably want one of
+those criteria to be isolation, and it's probably a good idea to sort by that
+measure, then take the best $\sim5$ onto the next section.
+
+\section{Lagrange Volumes}
+A Lagrange volume is the volume that a group of particles occupied at an
+earlier time; in zoom-in simulations, we generally mean the volume occupied
+by the particles around a halo at $z = 0$ in the initial conditions so that we
+can put more particles in that part of the box and lower the resolution elsewhere.
+
+Included with this document is a script, \texttt{calc\_lagrange\_vol.py}, that 
+implements this idea.  It is tailored to an IRATE file that contains a halo 
+catalog, the $z=0$ particle data, and the particle data of the ICs, but you
+should be able to apply the ideas in it to another setup if need be.  
+
+I recommend calculating the size of the volumes for the halos selected earlier and 
+finding the smallest.  Specifically,  (barring environmental considerations) I wouldn't 
+stop until you find a halo that's smaller than relation given in Halo 1 in Jose's paper 
+with the parameters in Table 2.  This won't necessarily speed up your run, but it will
+reduce the memory and storage constraints.
+
+\section{Creating Zoom-in ICs}
+Once you've picked the smallest Lagrange volume, it's time to run a zoom-in simulation.
+Start by making a copy of your .conf file, and then let's start editing it (the file 
+\texttt{zoom\_music.conf} is an example of an edited .conf file).  Specifically,
+you'll want to change the following parameters:
+\begin{description}
+\item[levelmin]  You'll probably want to lower this from the resolution of the fullbox.
+How much varies; we've found that in a 50 Mpc/h box, setting it to 7 works well.
+\item[levelmax]  You'll want to raise this to the resolution that you've aiming for.
+You probably don't want to jump directly to your production resolution, but instead
+run a test at an intermediate resolution.
+\item[red\_offset] The position of the corner of the zoom-in region, in units of 0 to 1.
+The Lagrange volume script will spit out a set of three numbers for this -- just paste them in.
+\item[ref\_extent] The size of the zoom-in region, again in units of 0 to 1.  You can again
+paste this from the output of Lagrange volume script.
+\end{description}
+
+If you are making a hydrodynamics simulation for \texttt{GIZMO} you will also need to set the following options 
+
+Basically, \texttt{levelmax} set the resolution of the zoom-region and \texttt{ref\_extent} 
+and \texttt{ref\_offset} set the position and size of the box.  Another parameter, \texttt{padding}
+controls the size of the intermediate regions, but I recommend leaving it at 6 --- we found
+that worked best in Jose's paper.  Do \textbf{NOT} change the seeds that you've put in 
+already -- if you do, you'll get a completely different box.  You can add seeds at higher levels
+if you'd like -- read about the benefits in in the user's guide.
+
+There are other ways that you can initialize the zoom-in region, such as with an ellipsoid,
+but we haven't tested those methods and I've never used them.  You should read the 
+\texttt{MUSIC} user's guide if you want to try them -- I believe they basically work by 
+reading in an ASCII file with positions that must be in the zoom-in region.
+
+You're now almost ready to run your zoom-in simulation, but first we want to separate the
+particles into different groups (halo, disk, bulge, star, and boundary) in the \texttt{Gadget} 
+IC file so that we can give each particle mass a different softening length  For that, you'll want to 
+run your initial conditions through one of the \texttt{split\_gb.py} scripts included with this 
+document.  Unfortunately, each is hard-coded to the number of resolution steps in the file.  
+Each is named according to the number of resolution levels that there are, which is equal to 
+\texttt{(levelmax - levelmin) + 1}, since it's inclusive.  We'll be putting that number of resolution 
+levels into four particle groups, since we want to leave star empty in case we want to rerun
+with star formation later.
+
+So, as an example, if you set \texttt{levelmin = 7} and \texttt{levelmax = 12}, then you 
+should use \texttt{split\_gb\_6to4.py}.  There are six particle masses in the file and you 
+want to put them into the four available groups.  If there's no a pre-written script available
+for what you want to do, I recommend tweaking one of the given scripts to handle your
+problem.
+
+\section{Running the Zoom-in Simulation}
+Now you're finally ready to run your zoom-in simulation!  You'll want to start by recompiling
+\texttt{Gizmo} -- there are a few compile time options that we'll want to change.  I recommend creating
+a new folder and copying over the \texttt{GIZMO} folder wholesale, then editing the Config.sh. The new options will look something like this:
+
+\begin{verbatim}
+ADAPTIVE_GRAVSOFT_FORGAS
+HYDRO_MESHLESS_FINITE_MASS
+HAVE_HDF5
+OUTPUT_POSITIONS_IN_DOUBLE
+PERIODIC
+MULTIPLEDOMAINS=16
+OPENMP=4
+PMGRID=512
+PM_PLACEHIGHRESREGION=1+2+16
+PM_HIRES_REGION_CLIPPING=2000
+FIRE_PHYSICS_DEFAULTS
+\end{verbatim}
+
+Save and run \texttt{make clean \&\& make}.
+
+Many of these new options are related to hydro, so if you are running a dark matter only zoom-in simulation, you won't need these:
+
+\begin{verbatim}
+ADAPTIVE_GRAVSOFT_FORGAS
+HYDRO_MESHLESS_FINITE_MASS
+FIRE_PHYSICS_DEFAULTS
+\end{verbatim}
+
+Now let's edit our parameter file.  All we need to do is edit the name of our initial conditions
+file, probably the output file, and the softening lengths.  Specifically, you need to set a
+softening length for each group that contain particles.
+
+Lastly, just edit your PBS/slurm script to run with more processors, and you're now running a zoom-in
+simulation (from scratch)!
+
+\section{Post Processing:   \texttt{rockstar} and \texttt{consistent-trees}}
+You're done now, but you probably want to make another halo catalog and likely a merger tree.
+You can run \texttt{AHF} again if you'd like, but here I'll talk you through how to run 
+\texttt{rockstar} on all of the snapshots.  Note that  \texttt{rockstar} only halo finds on the high 
+resolution particles, so the halo catalog will be incomplete and/or wrong in regions where 
+low-resolution particles exist.
+
+\texttt{rockstar} again has a configuration file that you'll have to make some a 
+couple changes to, but the provided \texttt{rockstar\_parallel.cfg} should give
+you a good starting point.  You'll need to change
+\begin{description}
+\item[INBASE] Path to the folder that holds the snapshots
+\item[OUTBASE] Path to a folder that you want  \texttt{rockstar} to write to
+\item[NUM\_SNAPS] The total number of snapshots, assumed to
+include 0, that your simulation contains.
+\item[STARTING\_SNAP] The first snapshot that you want  \texttt{rockstar} to analyze.
+\item[NUM\_BLOCKS] Number of files per snapshot.
+\item[NUM\_READER] Number of reading processes.  Best to set this
+the same as NUM\_BLOCKS.
+\item[FILENAME] The name of each snapshot.  \texttt{<snap>} means the snapshot 
+number and \texttt{<block>} means the number of the file in that snapshot.  So, 
+\texttt{snapshot\_<snap>.<block>} will look for files named 
+INBASE/snapshot\_0.0 through INBASE/snapshot\_0.7, if NUM\_BLOCKS = 8.
+\item[NUM\_WRITERS] The number of processors that you want to 
+analyze the data for halos.
+\item [FORCE\_RES] The force softening in your high-res region.
+\end{description}
+You will also have to update the cosmology if you're not using
+WMAP-7.
+
+Running \texttt{rockstar} means starting a master processes, the reader processes,
+and the writer processes.  The included rockstar.pbs should give an
+idea of how to do that -- basically, you run a single \texttt{rockstar} process
+with the \texttt{rockstar\_parallel.cfg} file that you created above, then start
+NUM\_READERS and NUM\_WRITERS processes with the
+OUTBASE/auto-rockstar.cfg configuration file that rockstar will
+automatically create.
+
+You can also use \texttt{AHF} for halo finding on the zoom.  It performs some useful calculations for you in addition to halo-finding (e.g. density profiles and circular velocities), and is essentially the same as running on the fullbox.  You only have to edit \texttt{Makefile.config} and set the defineflags to:
+\begin{description}
+\item[-DPERIODIC]
+\item[-DMULTIMASS]
+\end{description}
+as now we have particles of multiple masses.  Again, the easiest way to do this is to comment the defineflags under \texttt{DM Fullbox} and uncomment the ones under \texttt{DM Zooms}.
+
+Running  \texttt{rockstar} can take a pretty long time, though usually not
+as long as running \texttt{Gadget}.  Once you're done, you'll probably want 
+to put the snapshots together into a merger tree.  For this, start by running, e.g.,
+\begin{verbatim}
+./Rockstar-0.99.9/scripts/gen_merger_cfg.pl rockstar_parallel.cfg
+\end{verbatim}
+This will initiate a perl script that will rework the parameters in 
+your  \texttt{rockstar} configuration file into a consistent-trees configuration
+file.  It'll also give you instructions on how to run \texttt{consistent-trees}, which
+basically amounts to compiling it and running another perl
+script.
+
+Once you have the merger tree, it's time to do science!  Unfortunately, you're also
+largely on your own at this point.  I have some scripts to convert said merger trees 
+into an IRATE file, but they're poorly written and I'd rather not generally share them 
+(but can make them available to people individually).  Instead, you should think
+carefully about what data you need from the simulation, and work to extract that.
+
+\end{document}

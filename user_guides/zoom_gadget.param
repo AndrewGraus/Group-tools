@@ -1,0 +1,103 @@
+%  Relevant files
+InitCondFile ./zoom_ICs_split.gadget       %here a relative path to the initial conditions
+OutputDir    ./raw_output/
+
+EnergyFile energy.txt
+InfoFile info.txt
+TimingsFile timings.txt
+CpuFile cpuconsump.txt
+
+RestartFile restart
+SnapshotFileBase snapshot
+OutputListFilename ./a_out_short.txt
+
+% CPU time -limit
+
+TimeLimitCPU 7200000 % in seconds = 2000 hours
+ResubmitOn 0
+ResubmitCommand non_existent.pbs   %This file doesn't exist 
+
+% Code options
+
+ICFormat 1
+SnapFormat 1
+ComovingIntegrationOn 1
+
+TypeOfTimestepCriterion 0
+OutputListOn 1
+PeriodicBoundariesOn 1
+
+% Caracteristics of run
+
+TimeBegin 0.00793651 % z=125, Begin of the simulation
+TimeMax 1.0 % z=0
+
+Omega0 0.266
+OmegaLambda 0.734
+OmegaBaryon 0.0  % only DM
+HubbleParam 0.71
+BoxSize 50 % Mpc h^-1
+
+% Output frequency
+
+TimeBetSnapshot 1.0627825	%Doesn't matter here cause I'm using a list of output times
+TimeOfFirstSnapshot 0.00398406
+CpuTimeBetRestartFile 18000.0 % here in seconds -- once every 5 hours
+TimeBetStatistics 0.05
+
+NumFilesPerSnapshot 8
+NumFilesWrittenInParallel 16
+
+% Accuracy of time integration
+
+ErrTolIntAccuracy 0.025
+CourantFac 0.15
+MaxSizeTimestep 0.02
+MinSizeTimestep 0.0
+MaxRMSDisplacementFac 0.2
+
+% Tree algorithm, force accuracy, domain update frequency
+
+ErrTolTheta 0.7
+TypeOfOpeningCriterion 1
+ErrTolForceAcc 0.005 %0.005
+TreeDomainUpdateFrequency 0.05 %0.05
+
+% Further parameters of SPH ; shouldn't matter for this simulation.
+
+DesNumNgb 50
+MaxNumNgbDeviation 2
+ArtBulkViscConst 0.8
+InitGasTemp 0 % always ignored if set to 0
+MinGasTemp 0
+
+% Memory allocation
+
+PartAllocFactor 2.0
+TreeAllocFactor 0.9
+BufferSize 300 % in MByte
+
+% System of units
+
+UnitLength_in_cm 3.08568025e+24 %1.0 Mpc h^-1
+UnitMass_in_g 1.989e+43         %1e10 solar mass h^-1
+UnitVelocity_in_cm_per_s 1e+5   %1 km/s
+GravityConstantInternal 0
+
+% Softening lengths
+
+MinGasHsmlFractional 0.25
+
+SofteningGas       0
+SofteningHalo      0.001
+SofteningDisk      0.005
+SofteningBulge     0.03
+SofteningStars     0
+SofteningBndry     0.4
+
+SofteningGasMaxPhys       0
+SofteningHaloMaxPhys      0.0001
+SofteningDiskMaxPhys      0.0005
+SofteningBulgeMaxPhys     0.003
+SofteningStarsMaxPhys     0
+SofteningBndryMaxPhys     0.04

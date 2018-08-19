@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#PBS -N Gadget
+#PBS -l nodes=6:ppn=12
+#PBS -o out.log
+#PBS -j oe
+#PBS -q cosmo_12c
+#PBS -m bea
+#PBS -M sgarriso@uci.edu
+##PBS -l walltime=99:00
+
+cd $PBS_O_WORKDIR
+
+mpiexec.hydra -np 72 ./Gadget-2.0.7/Gadget2/Gadget2 gadget.param
+
+
+
+

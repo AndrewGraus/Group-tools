@@ -1,0 +1,71 @@
+[AHF]
+
+# (stem of the) filename from which to read the data to be analysed
+ic_filename       = ../00DATA/SubhaloesGoingNotts/snap_C02_400_1023.
+
+# what type of input file (cf. src/libio/io_file.h)
+ic_filetype       = 61
+
+# prefix for the output files
+outfile_prefix    = test-v010.snap_C02_400_1023
+
+# number of grid cells for the domain grid (1D)
+LgridDomain       = 128
+
+# number of grid cells for the domain grid (1D) (limits spatial resolution to BoxSize/LgridMax)
+LgridMax          = 16777216 
+
+# refinement criterion on domain grid (#particles/cell)
+NperDomCell       = 5.0
+
+# refinement criterion on all higher resolution grids (#particles/cells)
+NperRefCell       = 5.0
+
+# particles with velocity v > VescTune x Vesc are considered unbound 
+VescTune          = 1.5 
+
+# minimum number of particles for a halo
+NminPerHalo       = 20
+
+# normalisation for densities (1: RhoBack(z), 0:RhoCrit(z))
+RhoVir            = 0
+
+# virial overdensity criterion (<0: let AHF calculate it); Rvir is defined via M(<Rvir)/Vol = Dvir * RhoVir
+Dvir              = 200 
+
+# maximum radius (in Mpc/h) used when gathering initial set of particles for each halo (should be larger than the largest halo expected)
+MaxGatherRad      = 3.0	
+
+# the level on which to perform the domain decomposition (MPI only, 4=16^3, 5=32^3, 6=64^3, 7=128^3, 8=256^3, etc.)
+LevelDomainDecomp = 6
+
+# how many CPU's for reading (MPI only)
+NcpuReading       = 1
+
+# name of file containing the dark energy relevant tables (only relevant for -DDARK_ENERGY)
+de_filename       = my_dark_energy_table.txt
+
+
+############################### FILE SPECIFIC DEFINITIONS ###############################
+
+# NOTE: all these factors are supposed to transform your internal units to
+#           [x] = Mpc/h
+#           [v] = km/sec
+#           [m] = Msun/h
+#           [e] = (km/sec)^2
+
+[GADGET]
+GADGET_LUNIT      = 1.
+GADGET_MUNIT      = 1e10
+
+[TIPSY]
+TIPSY_BOXSIZE       = 50.0
+TIPSY_MUNIT         = 4.75e16
+TIPSY_VUNIT         = 1810.1
+TIPSY_EUNIT         = 0.0
+TIPSY_OMEGA0        = 0.24
+TIPSY_LAMBDA0       = 0.76
+
+[ART]
+ART_BOXSIZE         = 20
+ART_MUNIT           = 6.5e8

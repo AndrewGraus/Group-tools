@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#PBS -N TaL_rockstar
+#PBS -l nodes=1:ppn=1
+#PBS -o pout.log
+#PBS -e err.log
+#PBS -q cosmo_hm
+#PBS -m bea
+#PBS -M sgarriso@uci.edu
+##PBS -l walltime=99:00
+
+cd $PBS_O_WORKDIR
+
+echo "Starting server" >> log
+./Rockstar-0.99.9/rockstar -c ./pleiades.cfg &> server.dat &
+sleep 1
+echo "Starting readers" >> log
+mpiexec.hydra -np 8 ./Rockstar-0.99.9/rockstar -c halos/auto-rockstar.cfg >> test_output.dat 2>&1 & 
+sleep 1
+echo "Starting writers" >> log
+mpiexec.hydra -np 8 ./Rockstar-0.99.9/rockstar -c halos/auto-rockstar.cfg >> test_output.dat 2>&1

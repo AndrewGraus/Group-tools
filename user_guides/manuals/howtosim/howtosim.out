@@ -1,0 +1,21 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [2][-]{subsection.1.1}{Using Modules}{section.1}% 2
+\BOOKMARK [2][-]{subsection.1.2}{Outline of running a simulation}{section.1}% 3
+\BOOKMARK [1][-]{section.2}{Prerequisites: Compiling Dependencies and Setting Environment Variables}{}% 4
+\BOOKMARK [2][-]{subsection.2.1}{MPI}{section.2}% 5
+\BOOKMARK [2][-]{subsection.2.2}{Environment Variables}{section.2}% 6
+\BOOKMARK [2][-]{subsection.2.3}{FFTW}{section.2}% 7
+\BOOKMARK [3][-]{subsubsection.2.3.1}{FFTW2 for Gadget}{subsection.2.3}% 8
+\BOOKMARK [3][-]{subsubsection.2.3.2}{FFTW3 for MUSIC}{subsection.2.3}% 9
+\BOOKMARK [2][-]{subsection.2.4}{GSL}{section.2}% 10
+\BOOKMARK [1][-]{section.3}{Selecting the boxsize and starting redshift}{}% 11
+\BOOKMARK [1][-]{section.4}{Creating unigrid ICs}{}% 12
+\BOOKMARK [1][-]{section.5}{Running the unigrid ICs}{}% 13
+\BOOKMARK [2][-]{subsection.5.1}{Gizmo}{section.5}% 14
+\BOOKMARK [3][-]{subsubsection.5.1.1}{Making your runs more efficient}{subsection.5.1}% 15
+\BOOKMARK [2][-]{subsection.5.2}{Gadget}{section.5}% 16
+\BOOKMARK [1][-]{section.6}{Halo Finding on the Full Box}{}% 17
+\BOOKMARK [1][-]{section.7}{Lagrange Volumes}{}% 18
+\BOOKMARK [1][-]{section.8}{Creating Zoom-in ICs}{}% 19
+\BOOKMARK [1][-]{section.9}{Running the Zoom-in Simulation}{}% 20
+\BOOKMARK [1][-]{section.10}{Post Processing: rockstar and consistent-trees}{}% 21

@@ -1,0 +1,10 @@
+#!/bin/sh
+#SBATCH -J m10e_fg
+#SBATCH -p normal
+#SBATCH -t 48:00:00
+#SBATCH -N 32 -n 128
+#SBATCH -A TG-AST110035
+
+export OMP_NUM_THREADS=4
+
+ibrun tacc_affinity ./phopkins-gizmo-22a6d9492f12/GIZMO ./pro.param 1>gizmo.out 2>gizmo.err
