@@ -74,7 +74,7 @@ def Load_Particle_Data(giz_hdf5,add_dm=True,add_gas=False,add_stars=False,add_lo
     return PD_dict
 
 
-def Load_Halo_Data(giz_halo_file,h=0.702):
+def Load_Halo_Data(giz_halo_file,h=1.0):
     import numpy as np
     import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -99,10 +99,10 @@ def Load_Halo_Data(giz_halo_file,h=0.702):
     centers_rock[:,0], centers_rock[:,1], centers_rock[:,2] = f_rock[:,8]*1000.0/h, f_rock[:,9]*1000.0/h, f_rock[:,10]*1000.0/h #convert to kpc
     velocity_rock = np.zeros((len(f_rock[:,8]),3))
     velocity_rock[:,0], velocity_rock[:,1], velocity_rock[:,2] = f_rock[:,11], f_rock[:,12], f_rock[:,13]
-
+    
     return {'ids':id_rock, 'masses':M_rock, 'rvir':Rvir_rock, 'rmax':Rmax_rock, 'vmax':Vmax_rock, 'centers':centers_rock,'velocities':velocity_rock}
 
-def Load_Halo_Data_AHF(giz_halo_file,h=0.702):
+def Load_Halo_Data_AHF(giz_halo_file,h=1.0):
     import numpy as np
     import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -599,7 +599,7 @@ def Load_hi_res_halo_particle_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save
     elif hf_type=='AHF':
         halo_dict = Load_Halo_Data_AHF(halo_file,h=h)
         
-    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True,add_stars=True,add_gas=True,h=1.0)
+    PD_dict = Load_Particle_Data(giz_hdf5,add_low_res=True,add_stars=True,add_gas=True,h=h)
 
     id_rock = halo_dict['ids'] 
     M_rock = halo_dict['masses']
@@ -637,6 +637,7 @@ def Load_hi_res_halo_particle_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save
     star_coords = PD_dict['star']['coords']
     star_mass = PD_dict['star']['masses']
     star_ages = PD_dict['star']['ages']    
+    star_vels = PD_dict['star']['velocities']
 
     gas_coords = PD_dict['gas']['coords']
     gas_mass = PD_dict['gas']['masses']
@@ -668,8 +669,10 @@ def Load_hi_res_halo_particle_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save
 
     hi_res_particle_dict={}
 
+    print 'halos in this file: {}'.format(len(center_rock_select))3
     for halo_id in range(len(center_rock_select)):
-        
+        #halo_id = int(id_rock_select[jj])
+
         halo_particle_diff = center_rock_select[halo_id] - low_res_coords
         low_res_dist_all = np.linalg.norm(halo_particle_diff,axis=1)
         assert len(low_res_dist_all) == len(low_res_coords)
@@ -678,21 +681,26 @@ def Load_hi_res_halo_particle_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save
 
         hi_res_fraction = mass_rock_select[halo_id]/(mass_rock_select[halo_id]+low_res_mass_in_rvir)
 
-
-        if hi_res_fraction>=Low_res_tolerance:
+        if hi_res_fraction>=Low_res_tolerance and np.min(low_res_dist_all)>2.0*rgal_rock_select[halo_id]:
             if hi_res_fraction<f_hires_select[halo_id]:
-                print "Warning: hali {} has an AHF fraction of {}, but a calculated fraction of {}".format(str(halo_id),str(f_hires_select[halo_id]),str(hi_res_fraction))
+                print "Warning: hal0 {} has an AHF fraction of {}, but a calculated fraction of {}".format(str(halo_id),str(f_hires_select[halo_id]),str(hi_res_fraction))
 
             #print 'calculate hi-res particles '+str(halo_id)+' :'
-
             star_diff = center_rock_select[halo_id] - star_coords
+            star_vel_diff = velocities_rock_select[halo_id] - star_vels
             star_dist_all = np.linalg.norm(star_diff,axis=1)
+
+            print np.min(star_dist_all)
 
             star_masked_distances = (star_dist_all<rvir_rock_select[halo_id])
             star_masked_distances_gal = (star_dist_all<rgal_rock_select[halo_id])
 
             star_mass_in_rvir = np.sum(star_mass[star_masked_distances])
             star_mass_in_rgal = np.sum(star_mass[star_masked_distances_gal])
+
+            print "stars in halo:"
+            print "runing on halo of mass: {}".format(mass_rock_select[halo_id]/1.0e10)
+            print star_mass_in_rvir, star_mass_in_rgal
 
             #gas calculations
             gas_diff = center_rock_select[halo_id] - gas_coords
@@ -723,7 +731,7 @@ def Load_hi_res_halo_particle_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save
             closest_low_res_particle.append(np.min(low_res_dist_all))
 
             #now lets actually save some halo properties
-            hi_res_particle_dict.update({str(halo_id):{'coords':star_diff[star_masked_distances],'ages':star_ages[star_masked_distances],'masses':star_mass[star_masked_distances]}})
+            hi_res_particle_dict.update({str(id_rock_select[halo_id]):{'coords':star_diff[star_masked_distances],'vels':star_vel_diff[star_masked_distances],'ages':star_ages[star_masked_distances],'masses':star_mass[star_masked_distances]}})
             
     #now I want to make a dictionary that has each halo and its properties in it
 

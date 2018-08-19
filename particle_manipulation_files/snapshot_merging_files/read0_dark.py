@@ -2,6 +2,8 @@ import h5py
 import numpy as np
 import readsnap as reads
 
+#This is specifically for dark matter only sims
+
 halo_list = ['/gdata/rouge/agraus/Alternative_physics_runs/SIDM_runs/h11707/','/gdata/rouge/agraus/Alternative_physics_runs/WDM_runs/h11707/']
 
 for halo_number in halo_list:
@@ -19,14 +21,15 @@ for halo_number in halo_list:
     print dirname+snap_start+'.0.hdf5'
     print 'whatever'
     file = h5py.File(dirname+snap_start+'.0.hdf5', 'r')
-    stars=file['PartType4']
-    coord = stars['Coordinates']
-    Masses = stars['Masses']
-    Metallicity = stars['Metallicity']
-    ParticleIDs = stars['ParticleIDs']
-    SFT = stars['StellarFormationTime']
-    Vel = stars['Velocities']
+    #stars=file['PartType4']
+    #coord = stars['Coordinates']
+    #Masses = stars['Masses']
+    #Metallicity = stars['Metallicity']
+    #ParticleIDs = stars['ParticleIDs']
+    #SFT = stars['StellarFormationTime']
+    #Vel = stars['Velocities']
 
+    #fnew = h5py.File(fname_base+'.'+fname_ext, "w")
     fnew = h5py.File(dirname+snap_start+'_for_rock.'+'hdf5', "w")
     #Creating the header
     group_path_S = file['Header'].parent.name
@@ -34,17 +37,17 @@ for halo_number in halo_list:
     file.copy('Header', group_id_S, name="Header")
 
     #Generating the datasets for the gas 
-    fnew.create_dataset("PartType0/Coordinates", data=P0['p'])
-    fnew.create_dataset("PartType0/Velocities", data=P0['v'])
-    fnew.create_dataset("PartType0/ParticleIDs", data=P0['id'])
-    fnew.create_dataset("PartType0/Masses", data=P0['m'])
-    fnew.create_dataset("PartType0/InternalEnergy", data=P0['u'])
-    fnew.create_dataset("PartType0/Density", data=P0['rho'])
-    fnew.create_dataset("PartType0/SmoothingLength", data=P0['h'])
-    fnew.create_dataset("PartType0/ElectronAbundance", data=P0['ne'])
-    fnew.create_dataset("PartType0/NeutralHydrogenAbundance", data=P0['nh'])
-    fnew.create_dataset("PartType0/StarFormationRate", data=P0['sfr'])
-    fnew.create_dataset("PartType0/Metallicity", data=P0['z'])
+    #fnew.create_dataset("PartType0/Coordinates", data=P0['p'])
+    #fnew.create_dataset("PartType0/Velocities", data=P0['v'])
+    #fnew.create_dataset("PartType0/ParticleIDs", data=P0['id'])
+    #fnew.create_dataset("PartType0/Masses", data=P0['m'])
+    #fnew.create_dataset("PartType0/InternalEnergy", data=P0['u'])
+    #fnew.create_dataset("PartType0/Density", data=P0['rho'])
+    #fnew.create_dataset("PartType0/SmoothingLength", data=P0['h'])
+    #fnew.create_dataset("PartType0/ElectronAbundance", data=P0['ne'])
+    #fnew.create_dataset("PartType0/NeutralHydrogenAbundance", data=P0['nh'])
+    #fnew.create_dataset("PartType0/StarFormationRate", data=P0['sfr'])
+    #fnew.create_dataset("PartType0/Metallicity", data=P0['z'])
 
 
     #Generating the datasets for the hr dark matter particles
@@ -73,12 +76,12 @@ for halo_number in halo_list:
 
 
     #Generaing the datasets for the stelar particles
-    fnew.create_dataset("PartType4/Coordinates", data=P4['p'])
-    fnew.create_dataset("PartType4/Masses", data=P4['m'])
-    fnew.create_dataset("PartType4/Metallicity", data=P4['z'])
-    fnew.create_dataset("PartType4/ParticleIDs", data=P4['id'])
-    fnew.create_dataset("PartType4/StellarFormationTime", data=P4['age'])
-    fnew.create_dataset("PartType4/Velocities", data=P4['v'])
+    #fnew.create_dataset("PartType4/Coordinates", data=P4['p'])
+    #fnew.create_dataset("PartType4/Masses", data=P4['m'])
+    #fnew.create_dataset("PartType4/Metallicity", data=P4['z'])
+    #fnew.create_dataset("PartType4/ParticleIDs", data=P4['id'])
+    #fnew.create_dataset("PartType4/StellarFormationTime", data=P4['age'])
+    #fnew.create_dataset("PartType4/Velocities", data=P4['v'])
 
 
     #Just to fix the header ( regarding mass of the dark matter particle )

@@ -3,18 +3,19 @@ import numpy as np
 import sys
 
 
-dirpath = '/home/Alejandro/Dwarfs_gizmo/Alex_runs/test/snap_184/'
+#dirpath = '/gdata/rouge/agraus/files_for_Francisco/Alex_sims/raw_snaps/m10m/'
 
 if __name__ == "__main__":
-    if len(sys.argv)<2:
-        print "Usage: python combine.py <namein0> <nameout> <nchunks>"
+    if len(sys.argv)<3:
+        print "Usage: python combine.py <dirpath> <namein0> <nameout> <nchunks>"
         print "<namein0> == snapshot_184.0.hdf5"
         print "<nameout> == snapshot_184.hdf5"
         print "<nchunks> == 8"
         sys.exit(1337)
-    namein0=sys.argv[1]
-    nameout=sys.argv[2]
-    nchunks=sys.argv[3]
+    dirpath=sys.argv[1]
+    namein0=sys.argv[2]
+    nameout=sys.argv[3]
+    nchunks=sys.argv[4]
     
     fname_in = "%s/%s"%(dirpath,namein0)
     fname_out = "%s/%s"%(dirpath,nameout)
@@ -24,27 +25,28 @@ if __name__ == "__main__":
     # For reading the properties
     # Gas
     print "Reading gas data"
-    P0=reads.readsnap(dirpath,nchunks,0,cosmological=1,loud=1)
+    P0=reads.readsnap(dirpath,nchunks,0,cosmological=0,loud=1,snapshot_name='snapshot_184')
     # dark matter particles(high res.)
     print "Reading Dark Matter data: (only high res. particles)"
-    P1=reads.readsnap(dirpath,nchunks,1,cosmological=1,loud=1)
+    P1=reads.readsnap(dirpath,nchunks,1,cosmological=0,loud=1,snapshot_name='snapshot_184')
     print "Reading Dark Matter data: (low res. particles: PartType2)"
-    P2=reads.readsnap(dirpath,nchunks,2,cosmological=1,loud=1)
+    P2=reads.readsnap(dirpath,nchunks,2,cosmological=0,loud=1,snapshot_name='snapshot_184')
     print "Reading Dark Matter data: (low res. particles: PartType3)"
-    P3=reads.readsnap(dirpath,nchunks,3,cosmological=1,loud=1)
+    P3=reads.readsnap(dirpath,nchunks,3,cosmological=0,loud=1,snapshot_name='snapshot_184')
     # Stellar particles
     print "Reading data for Stellar Particles"
-    P4=reads.readsnap(dirpath,nchunks,4,cosmological=1,loud=1)
+    P4=reads.readsnap(dirpath,nchunks,4,cosmological=0,loud=1,snapshot_name='snapshot_184')
 
     # This is just for making a copy of the header
-    file = h5py.File(fname_in, 'r')
+    print 'copying header from: '+str(fname_in) 
+    file_copy = h5py.File(fname_in+'0.hdf5', 'r')
 
     #fnew = h5py.File(fname_base+'.'+fname_ext, "w")
     fnew = h5py.File(fname_out, "w")
     # Creating the header
-    group_path_S = file['Header'].parent.name
+    group_path_S = file_copy['Header'].parent.name
     group_id_S = fnew.require_group(group_path_S)
-    file.copy('Header', group_id_S, name="Header")
+    file_copy.copy('Header', group_id_S, name="Header")
     # Generating the datasets for the gas 
     fnew.create_dataset("PartType0/Coordinates", data=P0['p'])
     fnew.create_dataset("PartType0/Velocities", data=P0['v'])
@@ -84,7 +86,6 @@ if __name__ == "__main__":
     fnew.create_dataset("PartType4/StellarFormationTime", data=P4['age'])
     fnew.create_dataset("PartType4/Velocities", data=P4['v'])
 
-
     # Just to fix the header ( regarding mass of the dark matter particle )
     # This is neccesary for using halo finders, but I think we can skip this fix if we only want to# do post-analysis ( YT ).
     header_master2 = fnew["Header"]
@@ -95,4 +96,4 @@ if __name__ == "__main__":
     DM_mass = np.array([ 0.,  1.7439451156263888e-07,  0.,  0.,  0.,  0.])
     header_toparse2["MassTable"] = DM_mass
     fnew.close()
-    file.close()
+    file_copy.close()

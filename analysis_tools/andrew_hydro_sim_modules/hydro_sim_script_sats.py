@@ -30,12 +30,12 @@ print 'analysis for halo {} \n'.format(halo_num)
 
 #find sats 
 
-halos_matrix = andrew_hydro_sim_modules.hydro_sim_analysis.Identify_Host_and_Subhalos(particle_file,halo_file,subhalo_limit=10**9.0)
+halos_matrix = andrew_hydro_sim_modules.hydro_sim_analysis.Identify_Host_and_Subhalos(particle_file,halo_file,subhalo_limit=10**9.0,print_values=True)
 
 sat_ids = halos_matrix[:,0]
 
 #print galaxy statistics
-
+'''
 M_star_list, M_gas_list, V_disp_list, V_rot_list = [],[],[],[]
 
 for selected_sat_id in sat_ids:
@@ -62,3 +62,4 @@ halos_matrix[:,11] = V_disp_list
 halos_matrix[:,12] = V_rot_list
 
 np.savetxt(plot_dir+'/'+str(halo_num)+'_halo_stats.txt',halos_matrix,header='halo_ids M_vir R_vir R_max V_max d_host X Y Z, M_star, M_gas, V_rot, V_disp')
+'''

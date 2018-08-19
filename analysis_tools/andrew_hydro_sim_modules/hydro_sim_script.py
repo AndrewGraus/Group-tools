@@ -30,11 +30,11 @@ print 'analysis for halo {} \n'.format(halo_num)
 
 #First thing is to print the statistics for the host
 
-#andrew_hydro_sim_modules.hydro_sim_analysis.Identify_Host(particle_file, halo_file, print_values=True)
+andrew_hydro_sim_modules.hydro_sim_analysis.Identify_Host(particle_file, halo_file, print_values=True)
 
 #print galaxy statistics
 
-star_age_T, star_FeH, star_parts_mass, gas_mass = andrew_hydro_sim_modules.hydro_sim_analysis.galaxy_statistics(particle_file, halo_file)
+star_age_T, star_FeH, star_parts_mass, gas_mass = andrew_hydro_sim_modules.hydro_sim_analysis.galaxy_statistics(particle_file, halo_file,print_values=True)
 
 np.savetxt(plot_dir+'/'+str(halo_num)+'_star_ages.txt',np.asarray(star_age_T))
 np.savetxt(plot_dir+'/'+str(halo_num)+'_star_FeH.txt',np.asarray(star_FeH)) 

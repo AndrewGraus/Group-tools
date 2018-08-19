@@ -4,8 +4,8 @@ import os.path
 import scipy.interpolate as interpolate
 import scipy.optimize as optimize
 import math
-#import yt
-#import yt.units as units
+import yt
+import yt.units as units
 
 ## This file was written by Phil Hopkins (phopkins@caltech.edu) for GIZMO ##
 
@@ -43,7 +43,6 @@ def readsnap(sdir,snum,ptype,
     npartTotal = header_toparse["NumPart_Total"]
     flag_cooling = header_toparse["Flag_Cooling"]
     numfiles = header_toparse["NumFilesPerSnapshot"]
-    print numfiles
     boxsize = header_toparse["BoxSize"]
     omega_matter = header_toparse["Omega0"]
     omega_lambda = header_toparse["OmegaLambda"]
@@ -174,14 +173,13 @@ def readsnap(sdir,snum,ptype,
 #        bhmass *= hinv
 
     file.close();
-
     if (ptype==0):
         return {'k':1,'p':pos,'v':vel,'m':mass,'id':ids,'u':ugas,'rho':rho,'h':hsml,'ne':nume,'nh':numh,'sfr':sfr,'z':metal};
     if (ptype==4):
         return {'k':1,'p':pos,'v':vel,'m':mass,'id':ids,'z':metal,'age':stellage}
 #    if (ptype==5) and (skip_bh==0):
 #        return {'k':1,'p':pos,'v':vel,'m':mass,'id':ids,'mbh':bhmass,'mdot':bhmdot}
-    if (ptype==5):
+    if (ptype==5) and (skip_bh==0):
         return {'k':1,'p':pos,'v':vel,'m':mass,'id':ids}    
     if (ptype==2):
         return {'k':1,'p':pos,'v':vel,'m':mass,'id':ids}
@@ -189,7 +187,6 @@ def readsnap(sdir,snum,ptype,
         return {'k':1,'p':pos,'v':vel,'m':mass,'id':ids}
     if (ptype==1):
         return {'k':1,'p':pos,'v':vel,'m':mass,'id':ids}
-
 
 
 
@@ -342,7 +339,6 @@ def load_gadget_binary_particledat(f, header, ptype, skip_bh=0):
     NpartCum = np.cumsum(Npart)
     n0 = NpartCum[ptype] - Npart[ptype]
     n1 = NpartCum[ptype]
-    print "Particle Mass: ", Massarr[ptype]
     
     ### particles positions. 3*Npart*float.
     pos = array.array('f')
@@ -373,7 +369,6 @@ def load_gadget_binary_particledat(f, header, ptype, skip_bh=0):
     if (Massarr[ptype]==0.0):
         Npart_MassCode_Tot = np.cumsum(Npart_MassCode)
         mm = mass[Npart_MassCode_Tot[ptype]-Npart_MassCode[ptype]:Npart_MassCode_Tot[ptype]]
-        #print 'mass = ', mm
 
     if ((ptype==0) | (ptype==4) | (ptype==5)):
         if (Npart[0]>0):
