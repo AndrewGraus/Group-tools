@@ -74,7 +74,7 @@ def Load_Particle_Data(giz_hdf5,add_dm=True,add_gas=False,add_stars=False,add_lo
     return PD_dict
 
 
-def Load_Halo_Data(giz_halo_file,h=1.0):
+def Load_Halo_Data(giz_halo_file,h=0.71):
     import numpy as np
     import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -102,7 +102,7 @@ def Load_Halo_Data(giz_halo_file,h=1.0):
     
     return {'ids':id_rock, 'masses':M_rock, 'rvir':Rvir_rock, 'rmax':Rmax_rock, 'vmax':Vmax_rock, 'centers':centers_rock,'velocities':velocity_rock}
 
-def Load_Halo_Data_AHF(giz_halo_file,h=1.0):
+def Load_Halo_Data_AHF(giz_halo_file,h=0.71):
     import numpy as np
     import h5py, re, os
     from astropy.cosmology import FlatLambdaCDM
@@ -810,7 +810,7 @@ def Load_hi_res_halo_particle_dict(giz_hdf5,halo_file,Low_res_tolerance=1.0,save
 
     hi_res_particle_dict={}
 
-    print 'halos in this file: {}'.format(len(center_rock_select))3
+    print 'halos in this file: {}'.format(len(center_rock_select))
     for halo_id in range(len(center_rock_select)):
         #halo_id = int(id_rock_select[jj])
 
