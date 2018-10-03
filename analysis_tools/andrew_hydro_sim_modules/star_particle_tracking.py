@@ -40,6 +40,8 @@ def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
     selected_ids = ids_zero[(star_ids==ids_zero)]
     selected_coords = coords_zero[(star_ids==ids_zero)]
     
+    print 'the selected number of star particles is {}'.format(len(selected_ids))
+
     group = output_hdf5.create_group('snapshot_'+snap_num)
     dset_i = group.create_dataset('ids',data=selected_ids)
     dset_c = group.create_dataset('coordinates',data=selected_coords)
@@ -62,7 +64,10 @@ def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
             f_ids = f_snap['PartType4']['ParticleIDs'][:]
 
             #now I need to correlate the ids from z=0 to this snapshot
-            particle_correlate = (selected_ids==f_ids)
+            #particle_correlate = np.array([xx in selected_ids for xx in f_ids])
+            particle_correlate = np.in1d(f_ids,selected_ids)
+
+            print 'This snapshot has {} star particles, {} are in the z = 0 list'.format(len(f_ids),np.sum(particle_correlate))
 
             step_ids = f_ids[particle_correlate]
             step_coords = f_coords[particle_correlate]
