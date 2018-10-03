@@ -27,6 +27,7 @@ def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
     ids_zero = f_zero['PartType4']['ParticleIDs'][:]
     coords_zero = f_zero['PartType4']['Coordinates'][:]/h
 
+    #This will check to see if you gave it a file or just a list
     if type(star_list)==str:
         star_ids = np.loadtxt(star_list)
         assert a.ndim==1 , 'The array is not 1d'
@@ -46,23 +47,33 @@ def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
     for snap_id in snapshot_numbers:
         #This is going to assume that the snapshot file names are the same
         #differing only by the snapshot number
+
+        print 'running for snapshot {}'.format(snap_id)
+
         snap_file = z0_snap.replace(str(snap_num),str(snap_id))
 
         f_snap = h5py.File(snap_loc+snap_file)
         a_scale = f_snap['Header'].attrs['Time'] #scale factor
 
-        f_coords = f_snap['PartType4']['Coordinates'][:]*a_scale/h #remember units are comoving/h
-        f_ids = f_snap['PartType4']['ParticleIDs'][:]
+        #I need to check if the snap actually has stars in it or else it will 
+        #give an error when trying to grab the data
+        if 'PartType4' in f_snap:
+            f_coords = f_snap['PartType4']['Coordinates'][:]*a_scale/h #remember units are comoving/h
+            f_ids = f_snap['PartType4']['ParticleIDs'][:]
 
-        #now I need to correlate the ids from z=0 to this snapshot
-        particle_correlate = (selected_ids==f_ids)
+            #now I need to correlate the ids from z=0 to this snapshot
+            particle_correlate = (selected_ids==f_ids)
 
-        step_ids = f_ids[particle_correlate]
-        step_coords = f_coords[particle_correlate]
+            step_ids = f_ids[particle_correlate]
+            step_coords = f_coords[particle_correlate]
         
+        else:
+            step_ids = []
+            step_coords = []
+
         group = output_hdf5.create_group('snapshot_'+snap_id)
-        dset_i = group.create_dataset('ids',data=f_ids)
-        dset_c = group.create_dataset('coordinates',data=f_coords)
+        dset_i = group.create_dataset('ids',data=step_ids)
+        dset_c = group.create_dataset('coordinates',data=step_coords)
 
     output_hdf5.close()
     
