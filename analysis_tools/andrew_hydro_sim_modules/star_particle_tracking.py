@@ -13,6 +13,8 @@
 import h5py, sys, re
 import numpy as np
 
+from snapshot_merging_files.readsnap as reads
+
 def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
     #first check if the input ids are an array or a file
 
