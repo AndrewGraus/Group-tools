@@ -90,17 +90,10 @@ def track_particles_multi(z0_snap,snapshot_numbers,star_list=None,snap_loc='./',
 
     output_hdf5 = h5py.File('star_tracking.hdf5','w')
 
-    f_zero = h5py.File(snap_loc+z0_snap)
-
-    h = f_zero['Header'].attrs['HubbleParam']
-
-    ids_zero = f_zero['PartType4']['ParticleIDs'][:]
-    coords_zero = f_zero['PartType4']['Coordinates'][:]/h
-
-    P4=reads.readsnap(snapdir_184,nchunks,4,cosmological=0,loud=1,snapshot_name='snapshot_184')
+    P4=reads.readsnap(snapdir_184,nchunks,4,cosmological=1,loud=1,snapshot_name='snapshot_184')
 
     ids_zero = P4['id']
-    coords_zero = P4['p']/h
+    coords_zero = P4['p']
 
     #This will check to see if you gave it a file or just a list
     if type(star_list)==str:
