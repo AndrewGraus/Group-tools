@@ -13,7 +13,7 @@
 import h5py, sys, re
 import numpy as np
 
-from snapshot_merging_files.readsnap as reads
+import snapshot_merging_files.readsnap as reads
 
 def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
     #first check if the input ids are an array or a file
@@ -85,14 +85,16 @@ def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
     output_hdf5.close()
 
 
-def track_particles_multi(z0_snap,snapshot_numbers,star_list=None,snap_loc='./',n_chuncks=1):
+def track_particles_multi(snapshot_numbers,z0_snap=None,star_list=None,snap_loc='./',nchunks=8):
     #first check if the input ids are an array or a file
 
-    snap_num = re.split('_|\.',z0_snap)[-2]
+    #snap_num = re.split('_|\.',z0_snap)[-2]
+
+    snap_num='184'
 
     output_hdf5 = h5py.File('star_tracking.hdf5','w')
 
-    P4=reads.readsnap(snapdir_184,nchunks,4,cosmological=1,loud=1,snapshot_name='snapshot_184')
+    P4=reads.readsnap('snapdir_184',nchunks,4,cosmological=1,loud=1,snapshot_name='snapshot_184')
 
     ids_zero = P4['id']
     coords_zero = P4['p']
@@ -122,16 +124,17 @@ def track_particles_multi(z0_snap,snapshot_numbers,star_list=None,snap_loc='./',
 
         print 'running for snapshot {}'.format(snap_id)
 
-        snap_file = z0_snap.replace(str(snap_num),str(snap_id))
+        #snap_file = z0_snap.replace(str(snap_num),str(snap_id))
 
-        f_snap = h5py.File(snap_loc+snap_file)
-        a_scale = f_snap['Header'].attrs['Time'] #scale factor
+        #f_snap = h5py.File(snap_loc+'snapdir_'+str(snap_id)+'/snapshot_'+str(snap_id)+'.0.hdf5')
+        #a_scale = f_snap['Header'].attrs['Time'] #scale factor
 
-        dirpath = 'snapshot_'+str(snap_id)
+        dirpath = 'snapdir_'+str(snap_id)
+        snap_name = 'snapshot_'+str(snap_id)
 
         #I need to check if the snap actually has stars in it or else it will 
         #give an error when trying to grab the data
-        P4=reads.readsnap(dirpath,nchunks,4,cosmological=1,loud=1,snapshot_name=dirpath)
+        P4=reads.readsnap(dirpath,nchunks,4,cosmological=1,loud=1,snapshot_name=snap_name)
         #The equivalent in this case is to check the value of 'k' which is -1 if there are 
         #no star particles
         if P4['k'] != -1:
