@@ -12,8 +12,6 @@ def High_z_gas_properties(snap_dir,snap_start,starting_snap_num='052'):
     particle back to the beginning of the simulation.
     '''
 
-    snap_dir = '/gdata/rouge/agraus/reionization_runs_hi_z/fg/'
-
     snap_loc = snap_dir+str(snap_start)+str(starting_snap_num)+'.hdf5'
 
     f_initial = h5py.File(snap_loc)
