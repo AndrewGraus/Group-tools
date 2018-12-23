@@ -1,9 +1,9 @@
 import h5py, os
 import numpy as np
 import numpy.ma as ma
+import astropy.constants as const
 
 def High_z_gas_properties(snap_dir,snap_start,starting_snap_num='052'):
-
     '''
     The purpose of this program is to test the gas properties of the gas that forms stars
     in the reionization runs. The plan is to take all of the stars at z = 6 (snapshot 
@@ -24,7 +24,7 @@ def High_z_gas_properties(snap_dir,snap_start,starting_snap_num='052'):
     output_hdf5 = h5py.File('gas_particles.hdf5')
 
     #Now I want all the numbers from your snap to 000
-    snapshot_numbers = ["%03d" % x for x in np.arange(1,int(starting_snap_num,1))]
+    snapshot_numbers = ["%03d" % x for x in np.arange(1,int(starting_snap_num),1)]
     #This takes the number of snaps and assures they are in the 000 format of snaps
 
     for snap_id in snapshot_numbers:
@@ -102,5 +102,70 @@ def High_z_gas_properties(snap_dir,snap_start,starting_snap_num='052'):
         assert np.sum(IE_final!=0.0)==np.sum(np.in1d(star_ids_sort,gas_ids_sort))
         assert np.sum(Z_final!=0.0)==np.sum(np.in1d(star_ids_sort,gas_ids_sort))
         assert np.sum(NH_final!=0.0)==np.sum(np.in1d(star_ids_sort,gas_ids_sort))
+
+    output_hdf5.close()
+
+def Calculate_temperature(snapshot):
+    #Okay I want to give a snapshot and then it autocalculates the temperatures
+    
+    proton_mass = const.m_p  #in kg by default
+    gamma = 5.0/3.0
+    k_B = const.k_B #in J/K by default
+
+    pt0 = snapshot['PartType0']
+    EA = pt0['ElectronAbundance'][:]
+    IE = pt0['InternalEnergy'][:]
+    rho = pt0['Density'][:]
+    helium_mass_fracs = pt0['Metallicity'][:,1]
+    ys_helium = helium_mass_fracs / (4.0 * (1.0 - helium_mass_fracs))
+    mus = (1.0+4.0*ys_helium) / (1.0+ys_helium+EA)
+
+    molecular_weights = proton_mass*mus
+    
+    Temp = (1.0e3)**2.0 * molecular_weights * (gamma-1.0) * IE / k_B #need to convert IE from (km/s)^2 to (m/s)^2
+
+    return Temp
+
+def return_gas_temp_and_coords(snap_dir,snap_start,starting_snap_num='052',file_name='gas_properties.hdf5'):
+    '''
+    The purpose of this program is to test the gas properties of the gas that forms stars
+    in the reionization runs. The plan is to take all of the stars at z = 6 (snapshot 
+    number 052 in the standard 600 FIRE snaps framework) and go back in time and find the 
+    gas particles that those stars formed out of. Then track the properties of those gas 
+    particle back to the beginning of the simulation.
+    '''
+
+    output_hdf5 = h5py.File(file_name)
+    snap_loc = snap_dir+str(snap_start)+str(starting_snap_num)+'.hdf5'
+
+    #Now I want all the numbers from your snap to 000
+    snapshot_numbers = ["%03d" % x for x in np.arange(1,int(starting_snap_num)+1,1)]
+    #This takes the number of snaps and assures they are in the 000 format of snaps
+    
+    for snap_id in snapshot_numbers:
+        print span_id
+        snap_loc_z = snap_loc.replace(str(starting_snap_num),str(snap_id))
+
+        print 'loading snap'
+        f_z = h5py.File(snap_loc_z)
+
+        'at z= '+str(f_z['Header'].attrs['Redshift'])
+
+        redshift = f_z['Header'].attrs['Redshift']
+
+        gas_ids_at_z = f_z['PartType0']['ParticleIDs'][:]
+        rho_at_z = f_z['PartType0']['Density'][:]
+        coords_at_z = f_z['PartType0']['Coordinates'][:]
+        NH_at_z = f_z['PartType0']['NeutralHydrogenAbundance'][:]
+
+        print 'calculating temp'
+        T_at_z = Calculate_temperature(f_z)
+
+        print 'adding to output file'
+        group = output_hdf5.create_group(str(round(redshift,3)))
+        dset_i = group.create_dataset('ids',data=gas_ids_at_z)
+        dset_rho = group.create_dataset('rho',data=rho_at_z)
+        dset_NH = group.create_dataset('NeutralHydrogenAbundance',data=NH_at_z)
+        dset_T = group.create_dataset('T',data=T_at_z)
 
     output_hdf5.close()
