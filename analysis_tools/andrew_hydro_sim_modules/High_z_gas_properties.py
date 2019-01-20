@@ -2,6 +2,7 @@ import h5py, os
 import numpy as np
 import numpy.ma as ma
 import astropy.constants as const
+import pickle
 
 def High_z_gas_properties(snap_dir,snap_start,starting_snap_num='052'):
     '''
@@ -126,25 +127,27 @@ def Calculate_temperature(snapshot):
 
     return Temp
 
-def return_gas_temp_and_coords(snap_dir,snap_start,starting_snap_num='052',file_name='gas_properties.hdf5'):
+def return_gas_temp_and_coords(snap_dir,snap_start,starting_snap_num='001',ending_snap_num='052',file_name='gas_properties.hdf5'):
     '''
-    The purpose of this program is to test the gas properties of the gas that forms stars
-    in the reionization runs. The plan is to take all of the stars at z = 6 (snapshot 
-    number 052 in the standard 600 FIRE snaps framework) and go back in time and find the 
-    gas particles that those stars formed out of. Then track the properties of those gas 
-    particle back to the beginning of the simulation.
+    This program prints the gas temperatures and coordinates 
+    
+    Inputs:
+    snap_dir - the directory containing the snapshots
+    snap_start - how the snapshot file names start (before the number, including the _)
+    snap_num - the snapshot where it will end (52 is z = 6 for the standard FIRE naming scheme)
+    file_name - what to name the output file
     '''
 
     output_hdf5 = h5py.File(file_name)
     snap_loc = snap_dir+str(snap_start)+str(starting_snap_num)+'.hdf5'
 
     #Now I want all the numbers from your snap to 000
-    snapshot_numbers = ["%03d" % x for x in np.arange(1,int(starting_snap_num)+1,1)]
+    snapshot_numbers = ["%03d" % x for x in np.arange(int(starting_snap_num),int(ending_snap_num)+1,1)]
     #This takes the number of snaps and assures they are in the 000 format of snaps
     
     for snap_id in snapshot_numbers:
-        print span_id
-        snap_loc_z = snap_loc.replace(str(starting_snap_num),str(snap_id))
+        print snap_id
+        snap_loc_z = snap_loc.replace(str(starting_snap_num),str(snap_id)) #replace number with new number
 
         print 'loading snap'
         f_z = h5py.File(snap_loc_z)
@@ -153,13 +156,13 @@ def return_gas_temp_and_coords(snap_dir,snap_start,starting_snap_num='052',file_
 
         redshift = f_z['Header'].attrs['Redshift']
 
-        gas_ids_at_z = f_z['PartType0']['ParticleIDs'][:]
-        rho_at_z = f_z['PartType0']['Density'][:]
-        coords_at_z = f_z['PartType0']['Coordinates'][:]
-        NH_at_z = f_z['PartType0']['NeutralHydrogenAbundance'][:]
+        gas_ids_at_z = f_z['PartType0']['ParticleIDs'][::10]
+        rho_at_z = f_z['PartType0']['Density'][::10]
+        coords_at_z = f_z['PartType0']['Coordinates'][::10]
+        NH_at_z = f_z['PartType0']['NeutralHydrogenAbundance'][::10]
 
         print 'calculating temp'
-        T_at_z = Calculate_temperature(f_z)
+        T_at_z = Calculate_temperature(f_z) #refer to temperature calculation function above
 
         print 'adding to output file'
         group = output_hdf5.create_group(str(round(redshift,3)))
@@ -169,3 +172,68 @@ def return_gas_temp_and_coords(snap_dir,snap_start,starting_snap_num='052',file_
         dset_T = group.create_dataset('T',data=T_at_z)
 
     output_hdf5.close()
+
+def return_gas_temp_and_coords_struct(snap_dir,snap_start,starting_snap_num='001',ending_snap_num='052',file_name='gas_properties'):
+    '''
+    This program prints the gas temperatures and coordinates 
+
+    This module version changes the output file to a structured array (much smaller than hdf5)
+    
+    Inputs:
+    snap_dir - the directory containing the snapshots
+    snap_start - how the snapshot file names start (before the number, including the _)
+    snap_num - the snapshot where it will end (52 is z = 6 for the standard FIRE naming scheme)
+    file_name - what to name the output file (will append .npy)
+    '''
+
+    snap_dict = {}
+
+    snap_loc = snap_dir+str(snap_start)+str(starting_snap_num)+'.hdf5'
+
+    #Now I want all the numbers from your snap to 000
+    snapshot_numbers = ["%03d" % x for x in np.arange(int(starting_snap_num),int(ending_snap_num)+1,1)]
+    #This takes the number of snaps and assures they are in the 000 format of snaps
+    
+    for snap_id in snapshot_numbers:
+        print snap_id
+        snap_loc_z = snap_loc.replace(str(starting_snap_num),str(snap_id)) #replace number with new number
+
+        print 'loading snap'
+        f_z = h5py.File(snap_loc_z)
+
+        'at z= '+str(f_z['Header'].attrs['Redshift'])
+
+        redshift = f_z['Header'].attrs['Redshift']
+
+        gas_ids_at_z = f_z['PartType0']['ParticleIDs'][::10]
+        rho_at_z = f_z['PartType0']['Density'][::10]
+        coords_at_z = f_z['PartType0']['Coordinates'][::10]
+        NH_at_z = f_z['PartType0']['NeutralHydrogenAbundance'][::10]
+
+        print 'calculating temp'
+        T_at_z = Calculate_temperature(f_z) #refer to temperature calculation function above
+
+        print 'adding to output file'
+        #group = output_hdf5.create_group(str(round(redshift,3)))
+        
+        snap_dict[str(round(redshift,3))] = {'ids':None,'rho':None,'NeutralHydrogenAbundance':None,'T':None}
+
+        snap_dict[str(round(redshift,3))]['ids'] = gas_ids_at_z
+        snap_dict[str(round(redshift,3))]['rho'] = rho_at_z
+        snap_dict[str(round(redshift,3))]['NeutralHydrogenAbundance'] = NH_at_z
+        snap_dict[str(round(redshift,3))]['T'] = T_at_z
+
+        #dset_i = group.create_dataset('ids',data=gas_ids_at_z)
+        #dset_rho = group.create_dataset('rho',data=rho_at_z)
+        #dset_NH = group.create_dataset('NeutralHydrogenAbundance',data=NH_at_z)
+        #dset_T = group.create_dataset('T',data=T_at_z)
+
+    #save with pickle
+    with open('temp_test.pkl', 'wb') as f:
+        pickle.dump(snap_dict,f,pickle.HIGHEST_PROTOCOL) #HIGHEST_PROTOCOL saves it as a binary
+
+    #save with numpy
+    np.save('temp_test',snap_dict)
+        
+    
+
