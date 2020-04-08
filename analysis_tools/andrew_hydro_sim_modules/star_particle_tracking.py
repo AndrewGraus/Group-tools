@@ -1,13 +1,6 @@
-#I'm writing this because I don't understand how Andrew W program works
-#so I'm making my own.
-#
-#This is in principle simple (at least it will be at first)
-#
-#take in a list of star particle ids (or a file with the ids) and then
+#This program takes in a list of star particle ids (or a file with the ids) and then
 #a list of snapshots and track the positions of the particles back in
 #time.
-#
-#This will work like a merger tree, but much simpler
 #
 
 import h5py, sys, re
