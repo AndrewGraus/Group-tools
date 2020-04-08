@@ -19,6 +19,7 @@ def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
 
     h = f_zero['Header'].attrs['HubbleParam']
 
+    #load in particle data from z=0 snapshot
     ids_zero = f_zero['PartType4']['ParticleIDs'][:]
     coords_zero = f_zero['PartType4']['Coordinates'][:]/h
 
@@ -32,15 +33,18 @@ def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
         print('The ids were None or in an unrecognized format, so I will use everything:')
         star_ids = ids_zero
 
+    #find the subset of ids and coords requested in the z=0 snapshot
     selected_ids = ids_zero[(star_ids==ids_zero)]
     selected_coords = coords_zero[(star_ids==ids_zero)]
     
     print 'the selected number of star particles is {}'.format(len(selected_ids))
 
+    #save to an output hdf5 file
     group = output_hdf5.create_group('snapshot_'+snap_num)
     dset_i = group.create_dataset('ids',data=selected_ids)
     dset_c = group.create_dataset('coordinates',data=selected_coords)
 
+    #now loop over the snapshot ids in the past I want to find the particles in
     for snap_id in snapshot_numbers:
         #This is going to assume that the snapshot file names are the same
         #differing only by the snapshot number
@@ -55,22 +59,24 @@ def track_particles(z0_snap,snapshot_numbers,star_list=None,snap_loc='./'):
         #I need to check if the snap actually has stars in it or else it will 
         #give an error when trying to grab the data
         if 'PartType4' in f_snap:
+            #load the particle data from this snapshot
             f_coords = f_snap['PartType4']['Coordinates'][:]*a_scale/h #remember units are comoving/h
             f_ids = f_snap['PartType4']['ParticleIDs'][:]
 
             #now I need to correlate the ids from z=0 to this snapshot
-            #particle_correlate = np.array([xx in selected_ids for xx in f_ids])
             particle_correlate = np.in1d(f_ids,selected_ids)
 
             print 'This snapshot has {} star particles, {} are in the z = 0 list'.format(len(f_ids),np.sum(particle_correlate))
-
+            
+            #grab the relevant star particles
             step_ids = f_ids[particle_correlate]
             step_coords = f_coords[particle_correlate]
         
         else:
             step_ids = []
             step_coords = []
-
+        
+        #save that data
         group = output_hdf5.create_group('snapshot_'+snap_id)
         dset_i = group.create_dataset('ids',data=step_ids)
         dset_c = group.create_dataset('coordinates',data=step_coords)
