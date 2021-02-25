@@ -53,9 +53,9 @@ def anticumulative_hist(data,bins=None):
         if len(data) == 0:
             return zeros(len(bins)),bins
         if max(data) > max(bins):
-            print "Must have the largest bin be bigger than the largest data point."
-            print max(bins)
-            print max(data)
+            print("Must have the largest bin be bigger than the largest data point.")
+            print(max(bins))
+            print(max(data))
             import sys
             sys.exit(1337)
         temp,bins = histogram(data,bins)
